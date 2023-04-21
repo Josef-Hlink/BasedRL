@@ -1,1 +1,2 @@
-from pbrl.agents import *
+from pbrl.agents import REINFORCEAgent
+from pbrl.environment import CatchEnvironment

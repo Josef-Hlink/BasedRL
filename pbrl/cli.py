@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-from pathlib import Path
 
-from pbrl import DummyAgent
+from pbrl import REINFORCEAgent
+from pbrl import CatchEnvironment
 from pbrl.utils import ParseWrapper, P
 
 
@@ -22,11 +22,15 @@ def main():
 
     V = args.verbose
 
-    agent = DummyAgent(
+    env = CatchEnvironment()
+
+    agent = REINFORCEAgent(
         alpha = args.alpha,
     )
 
     hello_world = agent()
+
+    agent.learn(env)
     
     if V:
         print(f'{hello_world} from {agent.__class__.__name__}')

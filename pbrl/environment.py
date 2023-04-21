@@ -19,7 +19,7 @@ from gym import spaces
 ACTION_EFFECTS = (-1, 0, 1) # left, idle right. 
 OBSERVATION_TYPES = ['pixel','vector']
 
-class Environment():
+class CatchEnvironment():
     """
     Reinforcement learning environment where we need to move a paddle to catch balls that drop from the top of the screen. 
     
@@ -252,7 +252,7 @@ def test():
     seed = None
     
     # Initialize environment and Q-array
-    env = Environment(rows=rows, columns=columns, speed=speed, max_steps=max_steps,
+    env = CatchEnvironment(rows=rows, columns=columns, speed=speed, max_steps=max_steps,
                 max_misses=max_misses, observation_type=observation_type, seed=seed)
     s = env.reset()
     step_pause = 0.3 # the pause between each plot

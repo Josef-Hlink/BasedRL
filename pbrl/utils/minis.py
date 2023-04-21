@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-""" Even smaller helper methods (split up to prevent circular imports). """
-
 from datetime import datetime
 
 

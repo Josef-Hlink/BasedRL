@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-""" Namespaces for constants and paths. """
-
 from sys import platform
 from pathlib import Path
 
@@ -28,3 +26,4 @@ class P:
     root = Path(__file__).parent.parent.parent
     data = root / 'data'
     plots = root / 'plots'
+    paths = [root, data, plots]

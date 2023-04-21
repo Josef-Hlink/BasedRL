@@ -11,11 +11,11 @@ class ParseWrapper:
     def __init__(self, parser: ArgumentParser):
         """ Adds arguments to the passed parser object and parses them. """
         
-        parser.add_argument('-a', '--alpha', dest='alpha',
+        parser.add_argument('-a', dest='alpha',
             type=float, default=0.1, help='Learning rate'
         )
 
-        parser.add_argument('-V', '--verbose', action='store_true', help='Verbose output')
+        parser.add_argument('-V', dest='verbose', action='store_true', help='Verbose output')
 
         self.defaults = ParseWrapper.resolveDefaultNones(vars(parser.parse_args([])))
         self.args = ParseWrapper.resolveDefaultNones(vars(parser.parse_args()))

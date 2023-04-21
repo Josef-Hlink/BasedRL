@@ -1,0 +1,16 @@
+# environment stuff
+venv
+__pycache__
+docs
+.vscode
+.ipynb_checkpoints
+
+# project stuff
+pbrl.egg-info
+dist
+build
+
+# stuff that gets generated
+data
+plots
+archive

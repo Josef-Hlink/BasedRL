@@ -4,7 +4,7 @@
 import argparse
 
 from pbrl import REINFORCEAgent
-from pbrl import CatchEnvironment
+from pbrl.environment import CatchEnvironment
 from pbrl.utils import ParseWrapper, P
 
 
@@ -26,6 +26,8 @@ def main():
 
     agent = REINFORCEAgent(
         alpha = args.alpha,
+        render = args.render,
+        d_print = args.debug_print
     )
 
     hello_world = agent()

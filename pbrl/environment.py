@@ -9,8 +9,8 @@ Leiden University, The Netherlands
 Extended from Catch environment in Behavioural Suite: https://arxiv.org/pdf/1908.03568.pdf
 """
 
-import matplotlib
-matplotlib.use('TkAgg') #'Qt5Agg') # 'TkAgg'
+import matplotlib as mpl
+mpl.use('TkAgg') #'Qt5Agg') # 'TkAgg'
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import numpy as np
@@ -167,7 +167,9 @@ class CatchEnvironment():
         
         self.r = r
         self.total_reward += r
-        return self._get_state(), r, self.terminal, {}
+        # BUG: Why does env  return an empty dict after each step? -@koenv at 27/04/2023, 09:22:16
+        
+        return self._get_state(), r, self.terminal, {} 
     
     def render(self,step_pause=0.3):
         ''' Render the current environment situation '''

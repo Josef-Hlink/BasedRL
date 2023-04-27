@@ -34,15 +34,17 @@ class Network(nn.Module):
 
 class REINFORCEAgent:
 
-    def __init__(self, alpha: float) -> None:
+    def __init__(self, alpha: float, render: bool, d_print: bool) -> None:
         self.alpha = alpha
         self.network = Network(98, 3)
         self.optimizer = optim.Adam(self.network.parameters(), lr=self.alpha)
+        self.render = render
+        self.d_print = d_print
 
     def __call__(self) -> str:
         return 'hello world'
 
-    def learn(self, env: CatchEnvironment) -> None:
+    def learn(self, env: CatchEnvironment, episodes: int = 100) -> None:
         """
         Learn for 100 episodes.
         """
@@ -50,16 +52,26 @@ class REINFORCEAgent:
         state = env.reset()
         state = cast_state(state)
 
-        for episode in range(100):
+        for episode in range(episodes):
             done = False
+            env.reset() # reset the environment for each episode, resets done boolean. 
             while not done:
+
+                if self.render:
+                    env.render()
+
                 pred = self.network(state)
                 action = pred.argmax().item()
                 next_state, reward, done, _ = env.step(action)
+
+                if self.d_print:
+                    print(f"prediction: {pred}, action: {action}, reward: {reward}, done: {done}")
+
                 next_state = cast_state(next_state)
                 self.update(state, action, reward, next_state, done)
                 state = next_state
-            print(f'episode {episode} done')
+
+            print(f'episode {episode + 1} / {episodes} done')
         return
     
     def update(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray, done: bool) -> None:

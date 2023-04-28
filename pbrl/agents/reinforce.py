@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 
 from pbrl.environment import CatchEnvironment
+from pbrl.agents.transitions import Transition, TransitionBatch 
 
 import numpy as np
+from time import perf_counter
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -19,6 +22,7 @@ class Network(nn.Module):
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.relu2 = nn.ReLU()
         self.fc3 = nn.Linear(hidden_size, output_size)
+        self.softmax = nn.Softmax(dim=-1)
 
         self.loss = nn.MSELoss()
         return
@@ -29,17 +33,30 @@ class Network(nn.Module):
         x = self.fc2(x)
         x = self.relu2(x)
         x = self.fc3(x)
+        x = self.softmax(x)
         return x
 
 
 class REINFORCEAgent:
 
-    def __init__(self, alpha: float, render: bool, d_print: bool) -> None:
+    def __init__(self,
+        alpha: float,
+        gamma: float,
+        device: torch.device,
+        R: bool = False, V: bool = False, D: bool = False,
+    ) -> None:
+        
         self.alpha = alpha
-        self.network = Network(98, 3)
+        self.gamma = gamma
+
+        self.device = device
+
+        self.network = Network(98, 3).to(self.device)
         self.optimizer = optim.Adam(self.network.parameters(), lr=self.alpha)
-        self.render = render
-        self.d_print = d_print
+        
+        self.R = R
+        self.V = V
+        self.D = D
 
     def __call__(self) -> str:
         return 'hello world'
@@ -49,43 +66,76 @@ class REINFORCEAgent:
         Learn for 100 episodes.
         """
 
-        state = env.reset()
-        state = cast_state(state)
+        rewards = []
+        start = perf_counter()
 
         for episode in range(episodes):
+            
+            # (re)set environment
+            state: torch.Tensor = self.castState(env.reset())
             done = False
-            env.reset() # reset the environment for each episode, resets done boolean. 
+
+            T = TransitionBatch()
+
             while not done:
 
-                if self.render:
-                    env.render()
+                if self.R: env.render()
 
-                pred = self.network(state)
-                action = pred.argmax().item()
+                # get action probability distribution
+                dist = torch.distributions.Categorical(self.network(state))
+                # sample action
+                action: int = dist.sample().item()
+                # take action
                 next_state, reward, done, _ = env.step(action)
+                next_state = self.castState(next_state)
+                
+                T.add(Transition(state, action, reward, next_state, done))
 
-                if self.d_print:
-                    print(f"prediction: {pred}, action: {action}, reward: {reward}, done: {done}")
+                if self.D:
+                    print(f'action dist.: {dist}, action: {action}, reward: {reward}, done: {done}')
 
-                next_state = cast_state(next_state)
-                self.update(state, action, reward, next_state, done)
                 state = next_state
 
-            print(f'episode {episode + 1} / {episodes} done')
+            # update policy
+            self.update(T)
+            rewards.append(T.totalReward)
+
+            if self.V:
+                status = f'episode {episode + 1} / {episodes}: reward: {T.totalReward:.2f}'
+                print(f'\r{status}' + ' ' * (79-len(status)), end='', flush=True)
+                if episode == episodes - 1: print()
+        
+        print(f'average reward: {np.mean(rewards)}')
+        print(f'time elapsed: {perf_counter() - start:.3f} s')
+
         return
     
-    def update(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray, done: bool) -> None:
-        """
-        Update the agent's policy.
-        """
-        target = self.network(state)
-        target[action] = reward
-        self.optimizer.zero_grad()
-        loss = self.network.loss(target, self.network(state))
-        loss.backward()
-        self.optimizer.step()
-        
+    def update(self, transitionBatch: TransitionBatch) -> None:
+        """ Update the agent's policy. """
 
-def cast_state(state: np.ndarray) -> torch.Tensor:
-    """ Cast 3D state (np.array) to 1D torch tensor. """
-    return torch.tensor(state, dtype=torch.float32).flatten()
+        # unpack transition batch into tensors (and put on device)
+        S, A, R, S_, D = map(lambda x: x.to(self.device), transitionBatch.unpack())
+
+        # we can't use gradients here
+        with torch.no_grad():
+            # initialize target value tensor
+            G = torch.zeros(len(S), dtype=torch.float32).to(self.device)
+            # calculate target values
+            for i in range(len(R)):
+                G[i] = sum([self.gamma**j * r for j, r in enumerate(R[i:])])
+        
+        # loop over transitions
+        for s, a, g in zip(S, A, G):
+            # get loss
+            dist = torch.distributions.Categorical(self.network(s))
+            loss = -dist.log_prob(a) * g
+            # backprop time baby
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+        
+        return
+
+    def castState(self, state: np.ndarray) -> torch.Tensor:
+        """ Cast 3D state (np.array) to 1D torch tensor on the correct device. """
+        return torch.tensor(state, dtype=torch.float32).flatten().to(self.device)

@@ -2,42 +2,58 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import warnings
 
 from pbrl import REINFORCEAgent
 from pbrl.environment import CatchEnvironment
-from pbrl.utils import ParseWrapper, P
+from pbrl.utils import ParseWrapper, P, DotDict
+
+import torch
 
 
 def main():
-    argParser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    args = ParseWrapper(argParser)()
-
-    print('arguments passed to cli.py:')
-    for k, v in args.items():
-        print(k, v)
-
-    print('paths:')
-    for path in P.paths:
-        print(path)
-
-    V = args.verbose
-
+    
+    args, device = setup()
+    
     env = CatchEnvironment()
 
     agent = REINFORCEAgent(
+        # hyperparameters
         alpha = args.alpha,
-        render = args.render,
-        d_print = args.debug_print
-    )
+        gamma = args.gamma,
 
-    hello_world = agent()
+        # experiment-level args
+        device = device,
+        R = args.render,
+        V = args.verbose,
+        D = args.debug,
+    )
 
     agent.learn(env)
     
-    if V:
-        print(f'{hello_world} from {agent.__class__.__name__}')
+    return
+
+def setup() -> tuple[DotDict, torch.device]:
+    
+    # parse args
+    argParser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    args = ParseWrapper(argParser)()
+
+    # create paths
+    for path in P.paths:
+        path.mkdir(exist_ok=True, parents=True)
+
+    # set device
+    if args.gpu:
+        if torch.cuda.is_available():
+            device = torch.device('cuda')
+        else:
+            warnings.warn('CUDA not found, using CPU')
+            device = torch.device('cpu')
     else:
-        print(hello_world)
+        device = torch.device('cpu')
+
+    return args, device
 
 
 if __name__ == '__main__':

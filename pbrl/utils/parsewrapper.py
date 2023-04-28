@@ -14,10 +14,14 @@ class ParseWrapper:
         parser.add_argument('-a', dest='alpha', 
             type=float, default=0.1, help='Learning rate'
         )
+        parser.add_argument('-g', dest='gamma',
+            type=float, default=0.9, help='Discount factor'
+        )
 
+        parser.add_argument('-G', dest='gpu', action='store_true', help='Try to use GPU')
         parser.add_argument('-V', dest='verbose', action='store_true', help='Verbose output')
-        parser.add_argument('-P', dest='debug_print', action='store_true', default= False,  help='Print information every step')
-        parser.add_argument('-R', dest='render', action='store_true', default = False,  help='Render environment')
+        parser.add_argument('-D', dest='debug', action='store_true', help='Print debug statements')
+        parser.add_argument('-R', dest='render', action='store_true', help='Render environment')
 
         self.defaults = ParseWrapper.resolveDefaultNones(vars(parser.parse_args([])))
         self.args = ParseWrapper.resolveDefaultNones(vars(parser.parse_args()))

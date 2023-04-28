@@ -5,7 +5,7 @@ from sys import platform
 from pathlib import Path
 
 
-mac = platform == 'darwin'
+mac: bool = platform == 'darwin'
 
 class UC:
     """ Namespace with a few UniCode characters for Greek symbols and ASCII art in stdout. """

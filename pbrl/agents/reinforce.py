@@ -92,7 +92,7 @@ class REINFORCEAgent:
                 T.add(Transition(state, action, reward, next_state, done))
 
                 if self.D:
-                    print(f'action dist.: {dist}, action: {action}, reward: {reward}, done: {done}')
+                    print(f'action dist.: {dist.probs}, action: {action}, reward: {reward}, done: {done}')
 
                 state = next_state
 
@@ -120,7 +120,7 @@ class REINFORCEAgent:
         with torch.no_grad():
             # initialize target value tensor
             G = torch.zeros(len(S), dtype=torch.float32).to(self.device)
-            # calculate target values
+            # calculate (discounted) target values
             for i in range(len(R)):
                 G[i] = sum([self.gamma**j * r for j, r in enumerate(R[i:])])
         

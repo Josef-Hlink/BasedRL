@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from pbrl.environment import CatchEnvironment
 from pbrl.agents.transitions import Transition, TransitionBatch 
 
@@ -9,11 +7,6 @@ from time import perf_counter
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
-import os
-import matplotlib.pyplot as plt
-
-from pbrl.utils import P 
 
 
 class Network(nn.Module):
@@ -41,19 +34,18 @@ class Network(nn.Module):
         return x
 
 
-class REINFORCEAgent:
+class REINFORCEAgent_test:
 
     def __init__(self,
         alpha: float,
         gamma: float,
-        beta: float,
         device: torch.device,
-        R: bool = False, V: bool = False, D: bool = False, S: bool = False,
+        R: bool = False, V: bool = False, D: bool = False,
+        beta_init: float = 0.01, beta_max: float = 0.1, beta_inc: float = 0.01,
     ) -> None:
         
         self.alpha = alpha
         self.gamma = gamma
-        self.beta = beta
 
         self.device = device
 
@@ -64,20 +56,20 @@ class REINFORCEAgent:
         self.V = V
         self.D = D
 
-        self.save_plots = S
+        self.beta = beta_init
+        self.beta_max = beta_max
+        self.beta_inc = beta_inc
 
     def __call__(self) -> str:
         return 'hello world'
 
-    def learn(self, env: CatchEnvironment, episodes: int = 100) -> None:
+    def learn(self, env: CatchEnvironment, episodes: int = 1000) -> None:
         """
         Learn for 100 episodes.
         """
 
         rewards = []
         start = perf_counter()
-
-              
 
         for episode in range(episodes):
             
@@ -116,22 +108,11 @@ class REINFORCEAgent:
                 if episode == episodes - 1: print()
         
         print(f'average reward: {np.mean(rewards)}')
-        print(f'time elapsed: {perf_counter() - start:.3f} s')
-
-
-        if self.save_plots:
-            fig, ax = plt.subplots()
-            ax.set_xlabel('Episodes')
-            ax.set_ylabel('Cumulative Reward')
-            ax.plot(rewards)
-
-            # save the plot to a file
-            filename = f'rewards_b_{self.beta:2f}_a{self.alpha}_e{episodes}_g{self.gamma}.png'
-            fig.savefig(P.plots/filename)
+        print(f'time elapsed: {perf_counter() - start}')
 
         return
         
-    def update(self, transitionBatch: TransitionBatch) -> None:
+    def update(self, transitionBatch: TransitionBatch, beta: float = 0.01) -> None:
         """ Update the agent's policy. """
 
         # unpack transition batch into tensors (and put on device)
@@ -154,7 +135,7 @@ class REINFORCEAgent:
             probs = dist.probs
             entropy = -torch.sum(probs * torch.log(probs + 1e-8))
             # get loss
-            loss = -(log_prob * g + self.beta * entropy)
+            loss = -(log_prob * g + beta * entropy)
             # backprop time baby
             # zero_grad used to prevent earlier gradients from affecting the current gradient
             self.optimizer.zero_grad() 
@@ -162,8 +143,8 @@ class REINFORCEAgent:
             # update parameters
             self.optimizer.step()
         
-        # gradually decrease beta over time
-        self.beta *= 0.99
+        # gradually increase beta over time
+        beta *= 1.01
         
         return
 

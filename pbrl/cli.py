@@ -21,12 +21,14 @@ def main():
         # hyperparameters
         alpha = args.alpha,
         gamma = args.gamma,
+        beta = args.beta,
 
         # experiment-level args
         device = device,
         R = args.render,
         V = args.verbose,
         D = args.debug,
+        S = args.save,
     )
 
     agent.learn(env)

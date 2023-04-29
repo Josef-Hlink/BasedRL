@@ -171,7 +171,7 @@ class CatchEnvironment():
         
         return self._get_state(), r, self.terminal, {} 
     
-    def render(self,step_pause=0.3):
+    def render(self,step_pause=0.1):
         ''' Render the current environment situation '''
         if self.total_timesteps is None: 
             ValueError("You need to reset() the environment before you render it")

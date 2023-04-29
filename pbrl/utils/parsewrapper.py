@@ -17,11 +17,15 @@ class ParseWrapper:
         parser.add_argument('-g', dest='gamma',
             type=float, default=0.9, help='Discount factor'
         )
+        parser.add_argument('-b', dest='beta',
+            type=float, default=0.9, help='Exploration rate')
 
         parser.add_argument('-G', dest='gpu', action='store_true', help='Try to use GPU')
         parser.add_argument('-V', dest='verbose', action='store_true', help='Verbose output')
         parser.add_argument('-D', dest='debug', action='store_true', help='Print debug statements')
         parser.add_argument('-R', dest='render', action='store_true', help='Render environment')
+        parser.add_argument('-S', dest='save', action='store_true', help='Save plots')
+        
 
         self.defaults = ParseWrapper.resolveDefaultNones(vars(parser.parse_args([])))
         self.args = ParseWrapper.resolveDefaultNones(vars(parser.parse_args()))

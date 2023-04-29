@@ -126,7 +126,7 @@ class REINFORCEAgent:
             ax.plot(rewards)
 
             # save the plot to a file
-            filename = f'rewards_b_{self.beta:2f}_a{self.alpha}_e{episodes}_g{self.gamma}.png'
+            filename = f'rewards_b_{self.beta:.2f}_a{self.alpha}_e{episodes}_g{self.gamma}.png'
             fig.savefig(P.plots/filename)
 
         return

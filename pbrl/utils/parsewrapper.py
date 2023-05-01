@@ -11,12 +11,40 @@ class ParseWrapper:
     def __init__(self, parser: ArgumentParser):
         """ Adds arguments to the passed parser object and parses them. """
         
-        parser.add_argument('-a', dest='alpha',
-            type=float, default=0.1, help='Learning rate'
+        # --- hyperparameters --- #
+        parser.add_argument('-a', dest='alpha', 
+            type=float, default=0.0001, help=f'Learning rate {bold(UC.a)}'
+        )
+        parser.add_argument('-b', dest='beta',
+            type=float, default=0.1, help=f'Entropy regularization coefficient {bold(UC.b)}'
+        )
+        parser.add_argument('-g', dest='gamma',
+            type=float, default=0.9, help=f'Discount factor {bold(UC.g)}'
+        )
+        parser.add_argument('-d', dest='delta',
+            type=float, default=0.995, help=f'Decay rate {bold(UC.d)} for learning rate {bold(UC.a)}'
+        )
+                            
+
+        # --- experiment-level args --- #
+        parser.add_argument('-ne', dest='nEpisodes',
+            type=int, default=2500, help='Number of episodes to train for'
+        )
+        parser.add_argument('-nr', dest='nRuns',
+            type=int, default=1, help='Number of runs to average over'
         )
 
-        parser.add_argument('-V', dest='verbose', action='store_true', help='Verbose output')
+        parser.add_argument('-PID', dest='projectID', default='bl', help='Project ID')
+        parser.add_argument('-RID', dest='runID', default=None, help='Run ID')
 
+        parser.add_argument('-G', dest='gpu', action='store_true', help='Try to use GPU')
+        parser.add_argument('-V', dest='verbose', action='store_true', help='Verbose output')
+        parser.add_argument('-D', dest='debug', action='store_true', help='Print debug statements')
+        parser.add_argument('-R', dest='render', action='store_true', help='Render environment')
+
+        parser.add_argument('-S', dest='save_n', action='store_true', help='Save network')
+
+        # --- parsing --- #
         self.defaults = ParseWrapper.resolveDefaultNones(vars(parser.parse_args([])))
         self.args = ParseWrapper.resolveDefaultNones(vars(parser.parse_args()))
         self.validate()
@@ -44,6 +72,14 @@ class ParseWrapper:
 
     def validate(self) -> None:
         """ Checks the validity of all passed values for the experiment. """
-        assert 0 <= self.args.alpha <= 1, \
-            f'Learning rate {UC.a} must be in [0, 1]'
+        assert 0 < self.args.alpha <= 1, \
+            f'Learning rate {UC.a} must be in (0 .. 1]'
+        assert 0 <= self.args.beta <= 1, \
+            f'Entropy regularization coefficient {UC.b} must be in [0 .. 1]'
+        assert 0 <= self.args.gamma <= 1, \
+            f'Discount factor {UC.g} must be in [0 .. 1]'
+        assert 0 < self.args.nEpisodes <= 1e5, \
+            'Number of episodes must be in (0 .. 100,000]'
+        assert 0 < self.args.nRuns <= 10, \
+            'Number of runs must be in (0 .. 10]'
         return

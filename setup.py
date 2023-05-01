@@ -3,8 +3,6 @@
 
 from setuptools import setup, find_packages
 
-from pbrl.utils.namespaces import P
-
 setup(
     name = 'pbrl',
     version = '0.0.1',
@@ -21,7 +19,7 @@ setup(
         'ipykernel',
         'jupyter',
         'gym',
-        'torch',
+        'wandb',
     ],
     entry_points = {
         'console_scripts': [
@@ -29,8 +27,3 @@ setup(
         ],
     },
 )
-
-
-# create paths
-for path in P.paths:
-    path.mkdir(exist_ok=True, parents=True)

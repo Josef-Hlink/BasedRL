@@ -41,7 +41,7 @@ class REINFORCEAgent:
 
     def __init__(self,
         alpha: float, beta: float, gamma: float, delta: float,
-        R: bool = False, V: bool = False, D: bool = False,
+        R: bool = False, V: bool = False, D: bool = False, S: bool = False,
         device: torch.device = torch.device('cpu')
     ) -> None:
         """
@@ -72,9 +72,9 @@ class REINFORCEAgent:
         self.R = R
         self.V = V
         self.D = D
+        self.S = S
 
         self.device = device
-        
         self.network = Network(98, 3).to(self.device)
         self.optimizer = optim.Adam(self.network.parameters(), lr=self.alpha)
 
@@ -99,8 +99,6 @@ class REINFORCEAgent:
         rewards = []
         start = perf_counter()
 
-              
-
         for episode in range(nEpisodes):
             
             # (re)set environment
@@ -110,8 +108,6 @@ class REINFORCEAgent:
             T = TransitionBatch()
 
             while not done:
-
-                if self.R: env.render()
 
                 # get action probability distribution
                 dist = torch.distributions.Categorical(self.network(state))
@@ -151,7 +147,9 @@ class REINFORCEAgent:
 
         print(f'average reward: {np.mean(rewards):.3f}')
         print(f'time elapsed: {perf_counter() - start:.3f} s')
-
+        
+        if self.S: torch.save(self.network.state_dict(), 'network.pth')
+        
         return
     
     def learn(self, transitionBatch: TransitionBatch) -> float:
@@ -193,3 +191,5 @@ class REINFORCEAgent:
     def castState(self, state: np.ndarray) -> torch.Tensor:
         """ Cast 3D state (np.array) to 1D torch tensor on the correct device. """
         return torch.tensor(state, dtype=torch.float32).flatten().to(self.device)
+
+   

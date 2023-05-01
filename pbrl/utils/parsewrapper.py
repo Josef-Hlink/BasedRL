@@ -42,6 +42,8 @@ class ParseWrapper:
         parser.add_argument('-D', dest='debug', action='store_true', help='Print debug statements')
         parser.add_argument('-R', dest='render', action='store_true', help='Render environment')
 
+        parser.add_argument('-S', dest='save_n', action='store_true', help='Save network')
+
         # --- parsing --- #
         self.defaults = ParseWrapper.resolveDefaultNones(vars(parser.parse_args([])))
         self.args = ParseWrapper.resolveDefaultNones(vars(parser.parse_args()))

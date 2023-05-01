@@ -3,6 +3,7 @@
 
 import argparse
 import warnings
+import wandb
 
 from pbrl import REINFORCEAgent
 from pbrl.environment import CatchEnvironment
@@ -20,8 +21,9 @@ def main():
     agent = REINFORCEAgent(
         # hyperparameters
         alpha = args.alpha,
-        gamma = args.gamma,
         beta = args.beta,
+        gamma = args.gamma,
+        delta = args.delta,
 
         # experiment-level args
         device = device,
@@ -31,7 +33,9 @@ def main():
         S = args.save,
     )
 
-    agent.learn(env)
+    agent.train(env, args.nEpisodes)
+
+    wandb.finish()
     
     return
 
@@ -44,6 +48,21 @@ def setup() -> tuple[DotDict, torch.device]:
     # create paths
     for path in P.paths:
         path.mkdir(exist_ok=True, parents=True)
+
+    # setup wandb
+    wandb.init(
+        dir = P.wandb,
+        project = f'pbrl-{args.projectID}',
+        name = args.runID,
+        config = dict(
+            alpha = args.alpha,
+            beta = args.beta,
+            gamma = args.gamma,
+            delta = args.delta,
+            nEpisodes = args.nEpisodes,
+            nRuns = args.nRuns
+        )
+    )
 
     # set device
     if args.gpu:

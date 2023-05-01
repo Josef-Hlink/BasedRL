@@ -10,8 +10,10 @@ mac: bool = platform == 'darwin'
 class UC:
     """ Namespace with a few UniCode characters for Greek symbols and ASCII art in stdout. """
     e = '\u03b5'  # epsilon
-    g = '\u03b3'  # gamma
     a = '\u03b1'  # alpha
+    b = '\u03b2'  # beta
+    g = '\u03b3'  # gamma
+    d = '\u03b4'  # delta
     tl = '\u250c'  if mac else '|'  # ┌
     bl = '\u2514'  if mac else '|'  # └
     tr = '\u2510'  if mac else '|'  # ┐
@@ -26,4 +28,5 @@ class P:
     root = Path(__file__).parent.parent.parent
     data = root / 'data'
     plots = root / 'plots'
-    paths = [root, data, plots]
+    wandb = root / 'wandb'
+    paths = [root, data, plots, wandb]

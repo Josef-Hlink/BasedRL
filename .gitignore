@@ -4,6 +4,7 @@ __pycache__
 docs
 .vscode
 .ipynb_checkpoints
+wandb
 
 # project stuff
 pbrl.egg-info

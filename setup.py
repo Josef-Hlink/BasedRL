@@ -19,6 +19,7 @@ setup(
         'ipykernel',
         'jupyter',
         'gym',
+        'wandb',
     ],
     entry_points = {
         'console_scripts': [

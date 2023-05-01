@@ -4,14 +4,9 @@ __pycache__
 docs
 .vscode
 .ipynb_checkpoints
-wandb
+results
 
 # project stuff
 pbrl.egg-info
 dist
 build
-
-# stuff that gets generated
-data
-plots
-archive

@@ -26,7 +26,8 @@ class UC:
 class P:
     """ Namespace with all paths used in the project. """
     root = Path(__file__).parent.parent.parent
-    data = root / 'data'
-    plots = root / 'plots'
-    wandb = root / 'wandb'
-    paths = [root, data, plots, wandb]
+    results = root / 'results'
+    wandb = results / 'wandb'
+    plots = results / 'plots'
+    models = results / 'models'
+    paths = [results, wandb, plots, models]

@@ -19,7 +19,6 @@ def main():
     
     env = CatchEnvironment()
 
-
     agent = REINFORCEAgent(
         # hyperparameters
         alpha = args.alpha,
@@ -29,15 +28,15 @@ def main():
 
         # experiment-level args
         device = device,
-        R = args.render,
         V = args.verbose,
         D = args.debug,
-        S = args.save_n
+        S = args.saveNet or args.render,
+        W = not args.offline,        
     )
 
-    if args.render: load_agent_and_render(agent)
+    agent.train(env, args.nEpisodes)
 
-    else:  agent.train(env, args.nEpisodes)
+    if args.render: load_agent_and_render(agent)
 
     wandb.finish()
     
@@ -54,19 +53,20 @@ def setup() -> tuple[DotDict, torch.device]:
         path.mkdir(exist_ok=True, parents=True)
 
     # setup wandb
-    wandb.init(
-        dir = P.wandb,
-        project = f'pbrl-{args.projectID}',
-        name = args.runID,
-        config = dict(
-            alpha = args.alpha,
-            beta = args.beta,
-            gamma = args.gamma,
-            delta = args.delta,
-            nEpisodes = args.nEpisodes,
-            nRuns = args.nRuns
+    if not args.offline:
+        wandb.init(
+            dir = P.wandb,
+            project = f'pbrl-{args.projectID}',
+            name = args.runID,
+            config = dict(
+                alpha = args.alpha,
+                beta = args.beta,
+                gamma = args.gamma,
+                delta = args.delta,
+                nEpisodes = args.nEpisodes,
+                nRuns = args.nRuns
+            )
         )
-    )
 
     # set device
     if args.gpu:
@@ -97,9 +97,9 @@ def load_agent_and_render(agent):
         
     agent.network = Network(98, 3).to(agent.device)
 
-    agent.network.load_state_dict(torch.load('network.pth'))
+    agent.network.load_state_dict(torch.load(P.models / 'network.pth'))
 
-# Initialize the agent with the loaded network
+    # Initialize the agent with the loaded network
 
     for episode in range(10):
         

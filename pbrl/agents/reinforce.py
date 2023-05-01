@@ -4,6 +4,7 @@ from time import perf_counter
 
 from pbrl.environment import CatchEnvironment
 from pbrl.agents.transitions import Transition, TransitionBatch 
+from pbrl.utils import P
 
 import numpy as np
 import torch
@@ -41,7 +42,7 @@ class REINFORCEAgent:
 
     def __init__(self,
         alpha: float, beta: float, gamma: float, delta: float,
-        R: bool = False, V: bool = False, D: bool = False, S: bool = False,
+        V: bool = False, D: bool = False, S: bool = False, W: bool = False,
         device: torch.device = torch.device('cpu')
     ) -> None:
         """
@@ -55,10 +56,11 @@ class REINFORCEAgent:
             `float` gamma: discount factor
             `float` delta: learning rate decay rate
         
-        Interface flags:
-            `bool` R: render environment
-            `bool` V: verbose
-            `bool` D: debug
+        Flags:
+            `bool` V: toggle verbose printing
+            `bool` D: toggle debug printing
+            `bool` S: save model after training
+            `bool` W: toggle wandb logging
 
         Misc:
             `torch.device` device: device to run on (defaults to CPU)
@@ -69,24 +71,27 @@ class REINFORCEAgent:
         self.gamma = gamma
         self.delta = delta
 
-        self.R = R
         self.V = V
         self.D = D
         self.S = S
+        self.W = W
 
         self.device = device
         self.network = Network(98, 3).to(self.device)
         self.optimizer = optim.Adam(self.network.parameters(), lr=self.alpha)
+        return
+
 
     def train(self, env: CatchEnvironment, nEpisodes: int) -> None:
         """ Trains the agent on an environment for a given number of episodes. """
 
         # allows wandb to track the network's gradients, parameters, etc.
-        wandb.watch(
-            self.network,
-            log = 'all',
-            log_freq = nEpisodes // 100
-        )
+        if self.W:
+            wandb.watch(
+                self.network,
+                log = 'all',
+                log_freq = nEpisodes // 100
+            )
 
         # lr decay rate is called gamma here
         # not to be confused with our discount factor which is also called gamma
@@ -102,7 +107,7 @@ class REINFORCEAgent:
         for episode in range(nEpisodes):
             
             # (re)set environment
-            state: torch.Tensor = self.castState(env.reset())
+            state: torch.Tensor = self.castState(env.reset(), flatten=True)
             done = False
 
             T = TransitionBatch()
@@ -115,7 +120,7 @@ class REINFORCEAgent:
                 action: int = dist.sample().item()
                 # take action
                 next_state, reward, done, _ = env.step(action)
-                next_state = self.castState(next_state)
+                next_state = self.castState(next_state, flatten=True)
                 
                 T.add(Transition(state, action, reward, next_state, done))
 
@@ -136,22 +141,26 @@ class REINFORCEAgent:
                 print(f'\r{status}' + ' ' * (79-len(status)), end='', flush=True)
                 if episode == nEpisodes - 1: print()
         
-            wandb.log(
-                dict(
-                    reward = T.totalReward,
-                    lr = self.optimizer.param_groups[0]['lr'],
-                    loss = avgLoss,
-                ),
-                step = episode
-            )
+            if self.W:
+                wandb.log(
+                    dict(
+                        reward = T.totalReward,
+                        lr = self.optimizer.param_groups[0]['lr'],
+                        loss = avgLoss,
+                    ),
+                    step = episode
+                )
 
-        print(f'average reward: {np.mean(rewards):.3f}')
-        print(f'time elapsed: {perf_counter() - start:.3f} s')
+        if self.V:
+            print(f'average reward: {np.mean(rewards):.3f}')
+            print(f'time elapsed: {perf_counter() - start:.3f} s')
         
-        if self.S: torch.save(self.network.state_dict(), 'network.pth')
+        if self.S:
+            torch.save(self.network.state_dict(), P.models / f'{wandb.run.name}.pth')
         
         return
     
+
     def learn(self, transitionBatch: TransitionBatch) -> float:
         """
         Updates the agent's policy.
@@ -188,8 +197,11 @@ class REINFORCEAgent:
         return totalLoss / len(S)
 
 
-    def castState(self, state: np.ndarray) -> torch.Tensor:
-        """ Cast 3D state (np.array) to 1D torch tensor on the correct device. """
-        return torch.tensor(state, dtype=torch.float32).flatten().to(self.device)
-
-   
+    def castState(self, state: np.ndarray, flatten: bool = False) -> torch.Tensor:
+        """
+        Cast numpy array torch tensor on the correct device.
+        If `flatten`, the tensor is cast to a 1D tensor.
+        """
+        if flatten:
+            return torch.tensor(state, dtype=torch.float32).flatten().to(self.device)
+        return torch.tensor(state, dtype=torch.float32).to(self.device)

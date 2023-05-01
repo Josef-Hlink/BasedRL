@@ -3,13 +3,13 @@
 
 import argparse
 import warnings
-import wandb
 
 from pbrl import REINFORCEAgent
 from pbrl.environment import CatchEnvironment
 from pbrl.utils import ParseWrapper, P, DotDict
 
 import torch
+import wandb
 
 
 def main():
@@ -30,7 +30,6 @@ def main():
         R = args.render,
         V = args.verbose,
         D = args.debug,
-        S = args.save,
     )
 
     agent.train(env, args.nEpisodes)

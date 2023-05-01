@@ -13,7 +13,7 @@ class ParseWrapper:
         
         # --- hyperparameters --- #
         parser.add_argument('-a', dest='alpha', 
-            type=float, default=0.001, help=f'Learning rate {bold(UC.a)}'
+            type=float, default=0.0001, help=f'Learning rate {bold(UC.a)}'
         )
         parser.add_argument('-b', dest='beta',
             type=float, default=0.1, help=f'Entropy regularization coefficient {bold(UC.b)}'
@@ -22,13 +22,13 @@ class ParseWrapper:
             type=float, default=0.9, help=f'Discount factor {bold(UC.g)}'
         )
         parser.add_argument('-d', dest='delta',
-            type=float, default=0.99, help=f'Decay rate {bold(UC.d)} for learning rate {bold(UC.a)}'
+            type=float, default=0.995, help=f'Decay rate {bold(UC.d)} for learning rate {bold(UC.a)}'
         )
                             
 
         # --- experiment-level args --- #
         parser.add_argument('-ne', dest='nEpisodes',
-            type=int, default=1000, help='Number of episodes to train for'
+            type=int, default=2500, help='Number of episodes to train for'
         )
         parser.add_argument('-nr', dest='nRuns',
             type=int, default=1, help='Number of runs to average over'

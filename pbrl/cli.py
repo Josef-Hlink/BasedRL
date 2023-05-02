@@ -141,12 +141,11 @@ def setup() -> tuple[DotDict, torch.device]:
             gpu = args.gpu,
             saveModel = args.saveModel,
         )),
-        # TODO: add (some of the) env config options to args
         env = DotDict(dict(
             obsType = defaultEnv.observation_type,
-            nRows = defaultEnv.rows,
-            nCols = defaultEnv.columns,
-            speed = defaultEnv.speed,
+            nRows = args.envRows,
+            nCols = args.envCols,
+            speed = args.envSpeed,
             maxSteps = defaultEnv.max_steps,
             maxMisses = defaultEnv.max_misses,
         )),

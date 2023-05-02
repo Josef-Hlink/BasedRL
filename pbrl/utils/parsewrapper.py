@@ -41,6 +41,11 @@ class ParseWrapper:
         parser.add_argument('-PID', dest='projectID', default='bl', help='Project ID')
         parser.add_argument('-RID', dest='runID', default=None, help='Run ID')
 
+        # --- environment --- #
+        parser.add_argument('-er', dest='envRows', type=int, default=7, help='Number of rows in the environment')
+        parser.add_argument('-ec', dest='envCols', type=int, default=7, help='Number of columns in the environment')
+        parser.add_argument('-es', dest='envSpeed', type=float, default=1.0, help='Speed of the ball in the environment')
+
         # --- misc flags --- #
         parser.add_argument('-G', dest='gpu', action='store_true', help='Try to use GPU')
         parser.add_argument('-V', dest='verbose', action='store_true', help='Verbose output')

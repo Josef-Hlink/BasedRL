@@ -57,10 +57,7 @@ def renderTrainedAgent(runID: str, nEpisodes: int) -> None:
         alpha = config['hyperparams']['alpha'],
         beta = config['hyperparams']['beta'],
         gamma = config['hyperparams']['gamma'],
-        delta = config['hyperparams']['delta'],
-        V = False,
-        D = False,
-        W = False,
+        delta = config['hyperparams']['delta']
     )
 
     # set the agent's model to the one loaded from disk

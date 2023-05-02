@@ -40,15 +40,12 @@ def main():
         alpha = config.hyperparams.alpha,
         beta = config.hyperparams.beta,
         gamma = config.hyperparams.gamma,
-        delta = config.hyperparams.delta,
-
-        # flags
-        V = config.flags.verbose,
-        D = config.flags.debug,
-        W = not config.flags.offline,
+        delta = config.hyperparams.delta
     )
 
-    agent.train(env, config.nEpisodes)
+    V, D, W = config.flags.verbose, config.flags.debug, not config.flags.offline
+
+    agent.train(env, config.nEpisodes, V, D, W)
 
     if config.flags.saveModel:
         path = P.models / f'{config.runID}'
@@ -65,7 +62,7 @@ def main():
 
         print(f'Saved model to {bold(path)}\nTo render the model, run the following command:\nrender {config.runID}')
 
-    if not config.flags.offline:
+    if W:
         # tell wandb wether or not the agent has converged
         wandb.run.summary['converged'] = agent.converged
         wandb.finish()

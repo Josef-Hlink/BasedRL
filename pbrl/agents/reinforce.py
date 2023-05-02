@@ -17,7 +17,6 @@ class REINFORCEAgent:
     def __init__(self,
         model: torch.nn.Module, device: torch.device,
         alpha: float, beta: float, gamma: float, delta: float,
-        V: bool = False, D: bool = False, W: bool = False
     ) -> None:
         """ Initializes the agent by setting hyperparameters and creating the model and optimizer.
 
@@ -32,11 +31,6 @@ class REINFORCEAgent:
             `float` beta: entropy regularization coefficient
             `float` gamma: discount factor
             `float` delta: learning rate decay rate
-        
-        Flags:
-            `bool` V: toggle verbose printing
-            `bool` D: toggle debug printing
-            `bool` W: toggle wandb logging
         """
         
         self.device = device
@@ -47,10 +41,6 @@ class REINFORCEAgent:
         self.gamma = gamma
         self.delta = delta
 
-        self.V = V
-        self.D = D
-        self.W = W
-
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.alpha)
         self.convergeCounter: int = 0
         return
@@ -59,11 +49,22 @@ class REINFORCEAgent:
     # PUBLIC #
     ##########
 
-    def train(self, env: CatchEnvironment, nEpisodes: int) -> None:
-        """ Trains the agent on an environment for a given number of episodes. """
+    def train(self,
+        env: CatchEnvironment, nEpisodes: int,
+        V: bool = False, D: bool = False, W: bool = False,
+    ) -> None:
+        """ Trains the agent on an environment for a given number of episodes.
+        
+        ### Args
+        `CatchEnvironment` env: environment to train on
+        `int` nEpisodes: number of episodes to train for
+        `bool` V: toggle verbose printing
+        `bool` D: toggle debug printing
+        `bool` W: toggle wandb logging
+        """
 
         # allows wandb to track the model's gradients, parameters, etc.
-        if self.W:
+        if W:
             wandb.watch(
                 self.model,
                 log = 'all',
@@ -81,7 +82,7 @@ class REINFORCEAgent:
         # command line logging
         updateInterval = nEpisodes // 100
         rewardBuffer, lossBuffer = [], []
-        if self.V:
+        if V:
             iterator = ProgressBar(nEpisodes, updateInterval=updateInterval, metrics=['r', 'l'])
         else:
             iterator = range(nEpisodes)
@@ -119,7 +120,7 @@ class REINFORCEAgent:
 
             # log to console
             if (i+1) % updateInterval == 0:
-                if self.V:
+                if V:
                     iterator.updateMetrics(
                         r = sum(rewardBuffer) / updateInterval,
                         l = sum(lossBuffer) / updateInterval
@@ -132,7 +133,7 @@ class REINFORCEAgent:
                 rewardBuffer, lossBuffer = [], []
 
             # log to wandb
-            if self.W:
+            if W:
                 wandb.log(
                     dict(
                         reward = episodeReward,
@@ -147,7 +148,7 @@ class REINFORCEAgent:
             if self.converged:
                 break
 
-        if not self.V:
+        if not V:
             print('\ntraining complete\n' + '-' * 79)
 
         return

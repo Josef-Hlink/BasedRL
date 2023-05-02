@@ -97,10 +97,5 @@ class ParseWrapper:
             'Number of episodes must be in [100 .. 100,000]'
         assert 1 <= self.args.nRuns <= 10, \
             'Number of runs must be in [1 .. 10]'
-        
-        # --- misc flags --- #
-        if self.args.render:
-            assert self.args.saveNet == True, \
-                'Cannot render without saving network(s) to disk'
 
         return

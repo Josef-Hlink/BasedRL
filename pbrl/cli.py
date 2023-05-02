@@ -16,8 +16,13 @@ import wandb
 
 def main():
     
-    config, device = setup()
+    config, device = _initCLI()
 
+    # flags
+    V, D, S = config.flags.verbose, config.flags.debug, config.flags.saveModel
+    W = not config.flags.offline
+
+    # instantiate environment
     env = CatchEnvironment(
         observation_type = config.env.obsType,
         rows = config.env.nRows,
@@ -28,39 +33,26 @@ def main():
         seed = config.seed,
     )
 
-    # hardcode model for now
+    # initialize model
     model = LinearModel(inputSize=env.stateSize, outputSize=env.actionSize)
 
+    # initialize agent
     agent = REINFORCEAgent(
         # torch
         model = model,
         device = device,
-        
         # hyperparameters
         alpha = config.hyperparams.alpha,
         beta = config.hyperparams.beta,
         gamma = config.hyperparams.gamma,
-        delta = config.hyperparams.delta
+        delta = config.hyperparams.delta,
     )
 
-    V, D, W = config.flags.verbose, config.flags.debug, not config.flags.offline
-
+    # train agent
     agent.train(env, config.nEpisodes, V, D, W)
 
-    if config.flags.saveModel:
-        path = P.models / f'{config.runID}'
-        path.mkdir(parents=True, exist_ok=True)
-        # save config
-        if (path / 'config.json').exists():
-            warnings.warn(f'Overwriting existing config file for run {bold(config.runID)}')
-        with open(path / 'config.json', 'w') as f:
-            json.dump(config, f, indent=2)
-        # save model
-        if (path / 'model.pth').exists():
-            warnings.warn(f'Overwriting existing model file for run {bold(config.runID)}')
-        agent.saveModel(path / 'model.pth')
-
-        print(f'Saved model to {bold(path)}\nTo render the model, run the following command:\nrender {config.runID}')
+    if S:
+        _saveModel(config, agent)
 
     if W:
         # tell wandb wether or not the agent has converged
@@ -69,7 +61,7 @@ def main():
     
     return
 
-def setup() -> tuple[DotDict, torch.device]:
+def _initCLI() -> tuple[DotDict, torch.device]:
     """ Sets up the experiment.
 
     1. parses args
@@ -176,6 +168,25 @@ def setup() -> tuple[DotDict, torch.device]:
 
     return config, device
 
+def _saveModel(config: DotDict, agent: REINFORCEAgent) -> None:
+    """ Handles model saving logic and stdout messages. """
+    # create path
+    path = P.models / f'{config.runID}'
+    path.mkdir(parents=True, exist_ok=True)
+    # save config
+    if (path / 'config.json').exists():
+        warnings.warn(f'Overwriting existing config file for run {bold(config.runID)}')
+    with open(path / 'config.json', 'w') as f:
+        json.dump(config, f, indent=2)
+    # save model
+    if (path / 'model.pth').exists():
+        warnings.warn(f'Overwriting existing model file for run {bold(config.runID)}')
+    agent.saveModel(path / 'model.pth')
+    # stdout messages
+    print(f'Saved model to {path.parent}/{bold(path.name)}')
+    print(f'To render the model, run the following command:')
+    print(f'render {config.runID}')
+    return
 
 if __name__ == '__main__':
     main()

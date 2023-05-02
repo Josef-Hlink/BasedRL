@@ -65,9 +65,10 @@ def main():
 
         print(f'Saved model to {bold(path)}\nTo render the model, run the following command:\nrenderrun {config.runID}')
 
-    # tell wandb wether or not the agent has converged
-    wandb.run.summary['converged'] = agent.converged
-    wandb.finish()
+    if not config.flags.offline:
+        # tell wandb wether or not the agent has converged
+        wandb.run.summary['converged'] = agent.converged
+        wandb.finish()
     
     return
 

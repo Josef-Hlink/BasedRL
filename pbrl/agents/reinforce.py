@@ -5,6 +5,7 @@ from pathlib import Path
 
 from pbrl.environment import CatchEnvironment
 from pbrl.agents.transitions import Transition, TransitionBatch 
+from pbrl.utils import ProgressBar
 
 import numpy as np
 import torch
@@ -77,14 +78,23 @@ class REINFORCEAgent:
             gamma = self.delta             # yes, this looks weird but it makes sense everywhere else
         )
 
-        for episode in range(nEpisodes):
-            
+        # command line logging
+        updateInterval = nEpisodes // 100
+        rewardBuffer, lossBuffer = [], []
+        if self.V:
+            iterator = ProgressBar(nEpisodes, updateInterval=updateInterval, metrics=['r', 'l'])
+        else:
+            iterator = range(nEpisodes)
+            print('-' * 79)
+
+        for i in iterator:
+
             # (re)set environment
             state: torch.Tensor = self._castState(env.reset(), flatten=True)
             done = False
 
             # (re)init transition batch
-            T = TransitionBatch()
+            TB = TransitionBatch()
 
             while not done:
 
@@ -94,35 +104,50 @@ class REINFORCEAgent:
                 next_state, reward, done, _ = env.step(action)
                 next_state = self._castState(next_state, flatten=True)
                 
-                T.add(Transition(state, action, reward, next_state, done))
+                TB.add(Transition(state, action, reward, next_state, done))
 
                 state = next_state
 
             # update policy and learning rate
-            avgLoss = self._learn(T)
+            avgLoss = self._learn(TB)
             scheduler.step()
 
+            # housekeeping
+            episodeReward = TB.totalReward
+            rewardBuffer.append(episodeReward)
+            lossBuffer.append(avgLoss)
+
             # log to console
-            if self.V:
-                status = f'episode {episode + 1} / {nEpisodes}: reward: {T.totalReward:.2f}'
-                print(f'\r{status}' + ' ' * (79-len(status)), end='', flush=True)
-        
+            if (i+1) % updateInterval == 0:
+                if self.V:
+                    iterator.updateMetrics(
+                        r = sum(rewardBuffer) / updateInterval,
+                        l = sum(lossBuffer) / updateInterval
+                    )
+                else:
+                    status = f'episode {i + 1} / {nEpisodes} | ' + \
+                        f'r: {sum(rewardBuffer) / updateInterval:.2f}, ' + \
+                        f'l: {sum(lossBuffer) / updateInterval:.2f}'
+                    print(f'\r{status}' + ' ' * (79-len(status)), end='', flush=True)
+                rewardBuffer, lossBuffer = [], []
+
             # log to wandb
             if self.W:
                 wandb.log(
                     dict(
-                        reward = T.totalReward,
+                        reward = episodeReward,
                         lr = self.optimizer.param_groups[0]['lr'],
                         loss = avgLoss,
                     ),
-                    step = episode
+                    step = i
                 )
             
-            self._checkConvergence(T.totalReward)
+            # check for convergence
+            self._checkConvergence(episodeReward)
             if self.converged:
                 break
 
-        if self.V:
+        if not self.V:
             print('\ntraining complete\n' + '-' * 79)
 
         return

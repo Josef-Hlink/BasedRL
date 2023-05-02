@@ -88,10 +88,10 @@ class ParseWrapper:
             f'Discount factor {UC.g} must be in [0 .. 1]'
         
         # --- experiment-level args --- # 
-        assert 0 < self.args.nEpisodes <= 1e5, \
-            'Number of episodes must be in (0 .. 100,000]'
-        assert 0 < self.args.nRuns <= 10, \
-            'Number of runs must be in (0 .. 10]'
+        assert 100 <= self.args.nEpisodes <= 1e5, \
+            'Number of episodes must be in [100 .. 100,000]'
+        assert 1 <= self.args.nRuns <= 10, \
+            'Number of runs must be in [1 .. 10]'
         
         # --- misc flags --- #
         if self.args.render:

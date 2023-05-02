@@ -3,7 +3,7 @@
 
 from argparse import ArgumentParser
 
-from pbrl.utils import UC, bold, DotDict
+from pbrl.utils import UC, DotDict, bold, generateRunID, generateSeed
 
 
 class ParseWrapper:
@@ -32,11 +32,12 @@ class ParseWrapper:
         parser.add_argument('-nr', dest='nRuns',
             type=int, default=1, help='Number of runs to average over'
         )
+        parser.add_argument('-sd', dest='seed',
+            type=int, default=None, help='Seed for random number generators'
+        )
 
         # --- wandb --- #
-        parser.add_argument('--offline', dest='offline',
-            default=False, action='store_true', help='Offline mode (no wandb functionality)'
-        )
+        parser.add_argument('--offline', dest='offline', action='store_true', help='Offline mode (no wandb functionality)')
         parser.add_argument('-PID', dest='projectID', default='bl', help='Project ID')
         parser.add_argument('-RID', dest='runID', default=None, help='Run ID')
 
@@ -44,9 +45,7 @@ class ParseWrapper:
         parser.add_argument('-G', dest='gpu', action='store_true', help='Try to use GPU')
         parser.add_argument('-V', dest='verbose', action='store_true', help='Verbose output')
         parser.add_argument('-D', dest='debug', action='store_true', help='Print debug statements')
-        parser.add_argument('-S', dest='saveNet', action='store_true', help='Save network(s) to disk')
-        parser.add_argument('-R', dest='render', action='store_true', help='Render environment')
-
+        parser.add_argument('-S', dest='saveModel', action='store_true', help='Save model(s) to disk')
 
         # --- parsing --- #
         self.defaults = ParseWrapper.resolveDefaultNones(vars(parser.parse_args([])))
@@ -71,7 +70,10 @@ class ParseWrapper:
     def resolveDefaultNones(args: dict[str, any]) -> DotDict[str, any]:
         """ Resolves default values for exploration value and run ID. """
         resolvedArgs = args.copy()
-        ...
+        if args['runID'] is None and args['offline']:
+            resolvedArgs['runID'] = generateRunID()
+        if args['seed'] is None:
+            resolvedArgs['seed'] = generateSeed()
         return DotDict(resolvedArgs)
 
     def validate(self) -> None:

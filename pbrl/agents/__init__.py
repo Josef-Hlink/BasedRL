@@ -1,2 +1,1 @@
-from pbrl.agents.reinforce import *
-from pbrl.agents.transitions import *
+from pbrl.agents.reinforce import REINFORCEAgent

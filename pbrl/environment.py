@@ -105,6 +105,16 @@ class CatchEnvironment():
         elif self.observation_type == 'pixel':
             self.observation_space = spaces.Box(low=np.zeros((self.rows, self.columns, 2)), high=np.ones((self.rows, self.columns, 2)), dtype=int)
 
+    @property
+    def stateSize(self):
+        """ The total number of variables used to represent a single state (added by Josef-Hlink) """
+        return self.observation_space.shape[0] * self.observation_space.shape[1] * self.observation_space.shape[2]
+
+    @property
+    def actionSize(self):
+        """ The total number actions the agent can take (added by Josef-Hlink) """
+        return self.action_space.n
+
     def reset(self):
         ''' Reset the problem to empty board with paddle in the middle bottom and a first ball on a random location in the top row '''
         # reset all counters

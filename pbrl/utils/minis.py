@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import hashlib
 from datetime import datetime
 
 
@@ -27,6 +28,14 @@ def formattedRuntimeToSeconds(formattedRuntime: str) -> float:
     elif formattedRuntime[-2:] == 'hr':
         hr_, min_, sec_ = map(int, formattedRuntime[:-7].split(':'))
         return hr_ * 3600 + min_ * 60 + sec_ + float(formattedRuntime[-6:-3]) / 1000
+
+def generateRunID() -> str:
+    """ Returns a hash of the current time (8 characters long). """
+    return hashlib.sha1(str(datetime.now()).encode()).hexdigest()[:8]
+
+def generateSeed() -> int:
+    """ Returns a random seed (8 digits long). """
+    return int(hashlib.sha1(str(datetime.now()).encode()).hexdigest(), 16) % (10 ** 8)
 
 class DotDict(dict):
     """ `dot.notation` access to dictionary attributes. """

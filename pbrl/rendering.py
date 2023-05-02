@@ -16,15 +16,29 @@ def main():
     """ Entry point for the program. """
 
     argParser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    # basics
     argParser.add_argument('runID', help='ID of the run to render')
     argParser.add_argument('-n', dest='nEpisodes', default=1, help='Number of episodes to run for')
-    argParser.add_argument('-s', dest='speed', type = float, default=1.0, help='Speed of the ball in the environment')
+    # environment
+    argParser.add_argument('-r', dest='nRows', type=int, default=None,
+        help='Number of rows in the environment (overrides config)'
+    )
+    argParser.add_argument('-c', dest='nCols', type=int, default=None,
+        help='Number of columns in the environment (overrides config)'
+    )
+    argParser.add_argument('-s', dest='speed', type=float, default=None,
+        help='Speed of the ball in the environment (overrides config)'
+    )
+
     args = DotDict(vars(argParser.parse_args()))
 
-    renderTrainedAgent(args.runID, args.nEpisodes, args.speed)
+    renderTrainedAgent(args.runID, args.nEpisodes, args.nRows, args.nCols, args.speed)
     return
 
-def renderTrainedAgent(runID: str, nEpisodes: int, speed: float) -> None:
+def renderTrainedAgent(
+    runID: str, nEpisodes: int,
+    nRows: int = None, nCols: int = None, speed: float = None
+) -> None:
     """ Loads the agent's model from disk and renders it.
     
     Args:
@@ -32,14 +46,24 @@ def renderTrainedAgent(runID: str, nEpisodes: int, speed: float) -> None:
         `int` nEpisodes: number of episodes to run for
     """
     
-    # load config to see what env, and agent to use
+    # load config to see what env and agent to use
     with open(P.models / runID / 'config.json', 'r') as f:
         config = json.load(f)
 
+    # override config where specified
+    nRows = nRows or config['env']['nRows']
+    nCols = nCols or config['env']['nCols']
+    speed = speed or config['env']['speed']
+
+    # check validity of overrides
+    if config['env']['obsType'] == 'pixel':
+        assert nRows == config['env']['nRows'], 'Cannot change number of rows in pixel observation'
+        assert nCols == config['env']['nCols'], 'Cannot change number of columns in pixel observation'
+
     # load environment
     env = CatchEnvironment(
-        rows=config['env']['nRows'],
-        columns=config['env']['nCols'],
+        rows=nRows,
+        columns=nCols,
         speed=speed,
         max_steps=config['env']['maxSteps'],
         max_misses=config['env']['maxMisses'],
@@ -70,7 +94,10 @@ def renderTrainedAgent(runID: str, nEpisodes: int, speed: float) -> None:
 
 def _render(env: CatchEnvironment, agent: REINFORCEAgent, nEpisodes: int) -> None:
     """ Renders the agent's behaviour for a given number of episodes. """
-    print(f'Rendering {nEpisodes} episodes...')
+    if nEpisodes == 1:
+        print('Rendering 1 episode...')
+    else:
+        print(f'Rendering {nEpisodes} episodes...')
     
     for _ in range(nEpisodes):
         state, done = env.reset(), False

@@ -51,6 +51,7 @@ class REINFORCEAgent:
         self.W = W
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.alpha)
+        self.convergeCounter: int = 0
         return
 
     ##########
@@ -116,6 +117,10 @@ class REINFORCEAgent:
                     ),
                     step = episode
                 )
+            
+            self._checkConvergence(T.totalReward)
+            if self.converged:
+                break
 
         if self.V:
             print('\ntraining complete\n' + '-' * 79)
@@ -136,6 +141,11 @@ class REINFORCEAgent:
         """ Chooses an action to take based on the current policy. """
         state = self._castState(state, flatten=True)
         return torch.distributions.Categorical(self.model(state)).sample().item()
+
+    @property
+    def converged(self) -> bool:
+        """ Hardcoded tolerance for now. """
+        return self.convergeCounter >= 50
 
     ###########
     # PRIVATE #
@@ -189,3 +199,10 @@ class REINFORCEAgent:
         if flatten:
             state = state.flatten()
         return state
+
+    def _checkConvergence(self, reward: float) -> None:
+        """ Updates the convergence counter. """
+        if reward >= 30:
+            self.convergeCounter += 1
+        else:
+            self.convergeCounter = 0

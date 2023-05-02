@@ -23,19 +23,13 @@ class LinearModel(nn.Module):
         """ Initializes the model's layers. """
         super().__init__()
         self.fc1 = nn.Linear(inputSize, hiddenSize)
-        self.relu1 = nn.ReLU()
         self.fc2 = nn.Linear(hiddenSize, hiddenSize)
-        self.relu2 = nn.ReLU()
         self.fc3 = nn.Linear(hiddenSize, outputSize)
-        self.softmax = nn.Softmax(dim=-1)
         return
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """ Performs a forward pass through the model. """
-        x = self.fc1(x)
-        x = self.relu1(x)
-        x = self.fc2(x)
-        x = self.relu2(x)
-        x = self.fc3(x)
-        x = self.softmax(x)
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = torch.nn.functional.softmax(self.fc3(x), dim=-1)
         return x

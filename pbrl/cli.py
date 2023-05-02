@@ -63,7 +63,7 @@ def main():
             warnings.warn(f'Overwriting existing model file for run {bold(config.runID)}')
         agent.saveModel(path / 'model.pth')
 
-        print(f'Saved model to {bold(path)}\nTo render the model, run the following command:\nrenderrun {config.runID}')
+        print(f'Saved model to {bold(path)}\nTo render the model, run the following command:\nrender {config.runID}')
 
     if not config.flags.offline:
         # tell wandb wether or not the agent has converged

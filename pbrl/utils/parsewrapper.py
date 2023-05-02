@@ -42,6 +42,9 @@ class ParseWrapper:
         parser.add_argument('-RID', dest='runID', default=None, help='Run ID')
 
         # --- environment --- #
+        parser.add_argument('-et', dest='envType', type=str,
+            default='pixel', choices=['pixel', 'vector'], help='Observation type of the environment'
+        )
         parser.add_argument('-er', dest='envRows', type=int, default=7, help='Number of rows in the environment')
         parser.add_argument('-ec', dest='envCols', type=int, default=7, help='Number of columns in the environment')
         parser.add_argument('-es', dest='envSpeed', type=float, default=1.0, help='Speed of the ball in the environment')

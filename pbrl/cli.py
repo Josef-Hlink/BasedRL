@@ -139,7 +139,7 @@ def setup() -> tuple[DotDict, torch.device]:
             saveModel = args.saveModel,
         )),
         env = DotDict(dict(
-            obsType = defaultEnv.observation_type,
+            obsType = args.envType,
             nRows = args.envRows,
             nCols = args.envCols,
             speed = args.envSpeed,

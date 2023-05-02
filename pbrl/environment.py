@@ -23,6 +23,7 @@ class CatchEnvironment():
     """
     Reinforcement learning environment where we need to move a paddle to catch balls that drop from the top of the screen. 
     
+    ```
     -----------
     |     o   |
     |         |
@@ -33,7 +34,7 @@ class CatchEnvironment():
     
     o = ball
     _ = paddle
-    
+    ```
     
     State space: 
         - The width and height of the problem can be adjusted with the 'rows' and 'columns' argument upon initialization.
@@ -108,6 +109,8 @@ class CatchEnvironment():
     @property
     def stateSize(self):
         """ The total number of variables used to represent a single state (added by Josef-Hlink) """
+        if self.observation_type == 'vector':
+            return 3
         return self.observation_space.shape[0] * self.observation_space.shape[1] * self.observation_space.shape[2]
 
     @property

@@ -17,7 +17,7 @@ def main():
 
     argParser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     argParser.add_argument('runID', help='ID of the run to render')
-    argParser.add_argument('-n', dest='nEpisodes', default=3, help='Number of episodes to run for')
+    argParser.add_argument('-n', dest='nEpisodes', default=1, help='Number of episodes to run for')
     argParser.add_argument('-s', dest='speed', type = float, default=1.0, help='Speed of the ball in the environment')
     args = DotDict(vars(argParser.parse_args()))
 

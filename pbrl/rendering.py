@@ -18,12 +18,13 @@ def main():
     argParser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     argParser.add_argument('runID', help='ID of the run to render')
     argParser.add_argument('-n', dest='nEpisodes', default=3, help='Number of episodes to run for')
+    argParser.add_argument('-s', dest='speed', type = float, default=1.0, help='Speed of the ball in the environment')
     args = DotDict(vars(argParser.parse_args()))
 
-    renderTrainedAgent(args.runID, args.nEpisodes)
+    renderTrainedAgent(args.runID, args.nEpisodes, args.speed)
     return
 
-def renderTrainedAgent(runID: str, nEpisodes: int) -> None:
+def renderTrainedAgent(runID: str, nEpisodes: int, speed: float) -> None:
     """ Loads the agent's model from disk and renders it.
     
     Args:
@@ -39,7 +40,7 @@ def renderTrainedAgent(runID: str, nEpisodes: int) -> None:
     env = CatchEnvironment(
         rows=config['env']['nRows'],
         columns=config['env']['nCols'],
-        speed=config['env']['speed'],
+        speed=speed,
         max_steps=config['env']['maxSteps'],
         max_misses=config['env']['maxMisses'],
         observation_type=config['env']['obsType'],

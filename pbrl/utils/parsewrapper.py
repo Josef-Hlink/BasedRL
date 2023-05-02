@@ -98,4 +98,13 @@ class ParseWrapper:
         assert 1 <= self.args.nRuns <= 10, \
             'Number of runs must be in [1 .. 10]'
 
+        # --- environment --- #
+        assert 3 <= self.args.envRows <= 100, \
+            'Number of rows in the environment must be in [3 .. 100]'
+        assert 3 <= self.args.envCols <= 100, \
+            'Number of columns in the environment must be in [3 .. 100]'
+        assert 0.1 <= self.args.envSpeed <= 10, \
+            'Speed of the ball in the environment must be in [0.1 .. 10]'
+            
+
         return

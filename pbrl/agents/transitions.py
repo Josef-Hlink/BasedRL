@@ -40,7 +40,7 @@ class TransitionBatch:
 
     def unpack(self) -> tuple[Tensor]:
         """
-        Unpacks the batch into their respective tensors.
+        Unpacks the batch into all their respective tensors.
 
         Returns:
             - states
@@ -58,9 +58,34 @@ class TransitionBatch:
         )
     
     @property
+    def S(self) -> Tensor:
+        """ States tensor """
+        return stack([t.s for t in self.transitions])
+    
+    @property
+    def A(self) -> Tensor:
+        """ Actions tensor """
+        return Tensor([t.a for t in self.transitions]).long()
+    
+    @property
+    def R(self) -> Tensor:
+        """ Rewards tensor """
+        return Tensor([t.r for t in self.transitions])
+    
+    @property
+    def S_(self) -> Tensor:
+        """ Next states tensor """
+        return stack([t.s_ for t in self.transitions])
+    
+    @property
+    def D(self) -> Tensor:
+        """ Done flags tensor """
+        return Tensor([t.d for t in self.transitions])
+
+    @property
     def totalReward(self) -> float:
         """ Returns the total reward of the batch. """
-        return sum(t.r for t in self.transitions)
+        return self.R.sum().item()
 
     def __len__(self) -> int:
         return len(self.transitions)

@@ -19,7 +19,7 @@ def main():
     config, device = _initRun()
 
     # flags
-    V, D, S = config.flags.verbose, config.flags.debug, config.flags.saveModel
+    V, D, S, T = config.flags.verbose, config.flags.debug, config.flags.saveModel, config.flags.trackModel
     W = not config.flags.offline
 
     # instantiate environment
@@ -46,10 +46,11 @@ def main():
         beta = config.hyperparams.beta,
         gamma = config.hyperparams.gamma,
         delta = config.hyperparams.delta,
+        batchSize = config.hyperparams.batchSize,
     )
 
     # train agent
-    agent.train(env, config.nEpisodes, V, D, W)
+    agent.train(env, config.nEpisodes, V, D, W, T)
 
     if S:
         _saveModel(config, agent)
@@ -122,6 +123,7 @@ def _initRun() -> tuple[DotDict, torch.device]:
             beta = args.beta,
             gamma = args.gamma,
             delta = args.delta,
+            batchSize = args.batchSize,
         )),
         flags = DotDict(dict(
             verbose = args.verbose,

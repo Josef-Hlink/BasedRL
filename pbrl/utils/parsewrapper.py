@@ -7,7 +7,7 @@ from pbrl.utils import UC, DotDict, bold, generateID, generateSeed
 
 
 class ParseWrapper:
-    """ Adds and parses command line arguments for the main script. """
+    """ Adds and parses command line arguments for the pbrl-run script. """
     def __init__(self, parser: ArgumentParser):
         """ Adds arguments to the passed parser object and parses them. """
         
@@ -24,6 +24,9 @@ class ParseWrapper:
         parser.add_argument('-d', dest='delta',
             type=float, default=0.995, help=f'Decay rate {bold(UC.d)} for learning rate {bold(UC.a)}'
         )
+        parser.add_argument('-bs', dest='batchSize',
+            type=int, default=8, help='Batch size for training'
+        )
         
         # --- experiment-level args --- #
         parser.add_argument('-ne', dest='nEpisodes',
@@ -38,6 +41,7 @@ class ParseWrapper:
 
         # --- wandb --- #
         parser.add_argument('--offline', dest='offline', action='store_true', help='Offline mode (no wandb functionality)')
+        parser.add_argument('--track-model', dest='trackModel', action='store_true', help='Track model in wandb')
         parser.add_argument('-PID', dest='projectID', default='glob', help='Project ID')
         parser.add_argument('-RID', dest='runID', default=None, help='Run ID')
 
@@ -94,12 +98,18 @@ class ParseWrapper:
             f'Entropy regularization coefficient {UC.b} must be in [0 .. 1]'
         assert 0 <= self.args.gamma <= 1, \
             f'Discount factor {UC.g} must be in [0 .. 1]'
+        assert 0 < self.args.delta <= 1, \
+            f'Decay rate {UC.d} for learning rate {UC.a} must be in (0 .. 1]'
+        assert 1 <= self.args.batchSize <= 2**7 and self.args.batchSize in {2**i for i in range(8)}, \
+            'Batch size must be a power of 2 in [1 .. 128]'
         
         # --- experiment-level args --- # 
         assert 100 <= self.args.nEpisodes <= 1e5, \
             'Number of episodes must be in [100 .. 100,000]'
         assert 1 <= self.args.nRuns <= 10, \
             'Number of runs must be in [1 .. 10]'
+        assert not (self.args.offline and self.args.trackModel), \
+            'Cannot track model in offline mode'
 
         # --- environment --- #
         assert 3 <= self.args.envRows <= 100, \

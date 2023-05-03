@@ -70,24 +70,27 @@ class REINFORCEAgent:
         # initialize training
         self._initTrain(nEpisodes, V, W, T)
 
-        for i in self.iterator:
+        for episode in self.iterator:
 
             # sample episode and get reward
-            tB = self._sampleEpisode(env)
-            episodeR = tB.totalReward
+            transitionBatch = self._sampleEpisode(env)
+            episodeR = transitionBatch.totalReward
             
             # update policy and learning rate
-            episodeL = self._learn(tB)
+            episodeL = self._learn(transitionBatch)
             self.scheduler.step()
 
             # log to console and wandb
-            self._log(episodeR, episodeL, i=i)
+            self._logEpisode(episode, episodeR, episodeL)
             
             # check for convergence
             self._checkConvergence(episodeR)
             if self.converged:
                 break
         
+        # log final summary to console
+        self._logFinal()
+
         return
     
     def saveModel(self, path: Path) -> None:
@@ -225,12 +228,12 @@ class REINFORCEAgent:
         # return total loss over the batch
         return loss.sum().item()
 
-    def _log(self, eR: float, eL: float, i: int) -> None:
+    def _logEpisode(self, i: int, r: float, l: float) -> None:
         """ Handles all logging after an episode. """
-        self._tR += eR
-        self._tL += eL
-        self._maR += eR / self._uI
-        self._maL += eL / self._uI
+        self._tR += r
+        self._tL += l
+        self._maR += r / self._uI
+        self._maL += l / self._uI
         if (i+1) % self._uI == 0:
             if self._V:
                 self.iterator.updateMetrics(r=self._maR, l=self._maL)
@@ -240,7 +243,15 @@ class REINFORCEAgent:
                 if (i+1) == self._nE: print('\nfinished training')
             self._maR, self._maL = 0, 0
         if self._W:
-            wandb.log(dict(reward=eR, lr=self.optimizer.param_groups[0]['lr'], loss=eL), step=i)
+            wandb.log(dict(reward=r, lr=self.optimizer.param_groups[0]['lr'], loss=l), step=i)
+        return
+
+    def _logFinal(self) -> None:
+        """ Handles all logging after training. """
+        if self._V: self.iterator.finish()
+        else: print()
+        if self.converged: print('converged!')
+        print(f'avg. reward: {self._tR / self._nE:.2f} | avg. loss: {self._tL / self._nE:.2f}')
         return
 
     def _castState(self, state: np.ndarray | torch.Tensor, flatten: bool = False) -> torch.Tensor:

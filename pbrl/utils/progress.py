@@ -29,6 +29,10 @@ class ProgressBar:
         print(f'Started training for {numSteps} episodes at {bold(datetime.now().strftime("%H:%M:%S"))}')
         return
     
+    ##########
+    # PUBLIC #
+    ##########
+    
     def updateMetrics(self, **kwargs):
         """ Updates the metrics. """
         assert self.metrics is not None, 'No metrics were specified.'
@@ -36,6 +40,15 @@ class ProgressBar:
             self.metrics[k] = v
         self.info = ' | '.join(f'{k}: {v:.2f}' for k, v in self.metrics.items())
         return
+    
+    def finish(self):
+        """ Finishes the progress bar. """
+        print(f'\nFinished training in {bold(formatRuntime(perf_counter() - self.tic))}')
+        return
+
+    ###########
+    # PRIVATE #
+    ###########
 
     def _updatePercentage(self):
         """ Updates the percentage. """
@@ -54,6 +67,10 @@ class ProgressBar:
         """ Renders the progress bar. """
         print(f'\r{self.bar}', end='', flush=True)
 
+    ############
+    # INTERNAL #
+    ############
+
     def __iter__(self):
         """ Returns the iterator. """
         return self
@@ -65,6 +82,6 @@ class ProgressBar:
             self._updateBar()
             self._render()
         if self.i == self.t:
-            print(f'\nFinished training in {bold(formatRuntime(perf_counter() - self.tic))}')
+            self.finish()
         self.i += 1
         return next(self.iterator)

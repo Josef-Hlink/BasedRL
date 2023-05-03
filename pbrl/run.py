@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import json
+import yaml
 import argparse
 import warnings
 
@@ -18,11 +18,12 @@ def main():
     
     config, device = _initRun()
 
-    # flags
-    V, D, S, T = config.flags.verbose, config.flags.debug, config.flags.saveModel, config.flags.trackModel
+    # set flag variables
+    D, S, T = config.flags.debug, config.flags.saveModel, config.flags.trackModel
+    V = not config.flags.quiet
     W = not config.flags.offline
 
-    # instantiate environment
+    # initialize environment
     env = CatchEnvironment(
         observation_type = config.env.obsType,
         rows = config.env.nRows,
@@ -30,7 +31,7 @@ def main():
         speed = config.env.speed,
         max_steps = config.env.maxSteps,
         max_misses = config.env.maxMisses,
-        seed = config.seed,
+        seed = config.exp.seed,
     )
 
     # initialize model
@@ -42,15 +43,15 @@ def main():
         model = model,
         device = device,
         # hyperparameters
-        alpha = config.hyperparams.alpha,
-        beta = config.hyperparams.beta,
-        gamma = config.hyperparams.gamma,
-        delta = config.hyperparams.delta,
-        batchSize = config.hyperparams.batchSize,
+        alpha = config.agent.alpha,
+        beta = config.agent.beta,
+        gamma = config.agent.gamma,
+        delta = config.agent.delta,
+        batchSize = config.agent.batchSize,
     )
 
     # train agent
-    agent.train(env, config.nEpisodes, V, D, W, T)
+    agent.train(env, config.exp.nEpisodes, V, D, W, T)
 
     if S:
         _saveModel(config, agent)
@@ -104,62 +105,36 @@ def _initRun() -> tuple[DotDict, torch.device]:
     
     # parse args
     argParser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    args = ParseWrapper(argParser)()
+    config = ParseWrapper(argParser)()
 
     # set random seed for torch
-    torch.manual_seed(args.seed)
+    torch.manual_seed(config.exp.seed)
 
     defaultEnv = CatchEnvironment()
 
-    # create config
-    config = DotDict(dict(
-        projectID = f'pbrl-{args.projectID}',
-        runID = args.runID,
-        nEpisodes = args.nEpisodes,
-        nRuns = args.nRuns,
-        seed = args.seed,
-        hyperparams = DotDict(dict(
-            alpha = args.alpha,
-            beta = args.beta,
-            gamma = args.gamma,
-            delta = args.delta,
-            batchSize = args.batchSize,
-        )),
-        flags = DotDict(dict(
-            verbose = args.verbose,
-            debug = args.debug,
-            offline = args.offline,
-            gpu = args.gpu,
-            saveModel = args.saveModel,
-        )),
-        env = DotDict(dict(
-            obsType = args.envType,
-            nRows = args.envRows,
-            nCols = args.envCols,
-            speed = args.envSpeed,
-            maxSteps = defaultEnv.max_steps,
-            maxMisses = defaultEnv.max_misses,
-        )),
-    ))
+    config.exp.projectID = f'pbrl-{config.exp.projectID}'
+    config.env.maxSteps = defaultEnv.max_steps
+    config.env.maxMisses = defaultEnv.max_misses
 
     # create gitignored paths
     for path in P.ignored:
         path.mkdir(exist_ok=True, parents=True)
 
     # initialize wandb
-    if not args.offline:
+    if not config.flags.offline:
         wandb.init(
             dir = P.wandb,
-            project = f'pbrl-{args.projectID}',
-            name = args.runID,
+            project = config.exp.projectID,
+            name = config.exp.runID,
             config = config,
         )
         # a bit hacky, but we want to take the runID that wandb generates when we initialize it
-        config.update(runID = wandb.run.id)
+        # TODO: find a better way to do this
+        config.exp.runID = wandb.run.id
         wandb.config.update(config, allow_val_change=True)
 
     # set device
-    if args.gpu:
+    if config.flags.gpu:
         if torch.cuda.is_available():
             device = torch.device('cuda')
         else:
@@ -171,23 +146,30 @@ def _initRun() -> tuple[DotDict, torch.device]:
     return config, device
 
 def _saveModel(config: DotDict, agent: REINFORCEAgent) -> None:
-    """ Handles model saving logic and stdout messages. """
+    """ Handles model saving logic and stdout messages. """    
+    # create normal config for yaml
+    normalConfig = dict(
+        exp = dict(config.exp),
+        agent = dict(config.agent),
+        env = dict(config.env),
+        flags = dict(config.flags),
+    )
     # create path
-    path = P.models / f'{config.runID}'
+    path = P.models / f'{config.exp.runID}'
     path.mkdir(parents=True, exist_ok=True)
     # save config
-    if (path / 'config.json').exists():
-        warnings.warn(f'Overwriting existing config file for run {bold(config.runID)}')
-    with open(path / 'config.json', 'w') as f:
-        json.dump(config, f, indent=2)
+    if (path / 'config.yaml').exists():
+        warnings.warn(f'Overwriting existing config file for run {bold(config.exp.runID)}')
+    with open(path / 'config.yaml', 'w') as f:
+        yaml.dump(normalConfig, f)
     # save model
     if (path / 'model.pth').exists():
-        warnings.warn(f'Overwriting existing model file for run {bold(config.runID)}')
+        warnings.warn(f'Overwriting existing model file for run {bold(config.exp.runID)}')
     agent.saveModel(path / 'model.pth')
     # stdout messages
     print(f'Saved model to {path.parent}/{bold(path.name)}')
     print(f'To render the model, run the following command:')
-    print(f'pbrl-render {config.runID}')
+    print(f'pbrl-render {config.exp.runID}')
     return
 
 if __name__ == '__main__':

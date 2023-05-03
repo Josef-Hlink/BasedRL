@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import json
+import yaml
 
 from pbrl.utils import P, DotDict
 from pbrl.environment import CatchEnvironment
@@ -47,8 +47,8 @@ def renderTrainedAgent(
     """
     
     # load config to see what env and agent to use
-    with open(P.models / runID / 'config.json', 'r') as f:
-        config = json.load(f)
+    with open(P.models / runID / 'config.yaml', 'r') as f:
+        config = DotDict(yaml.safe_load(f))
 
     # override config where specified
     nRows = nRows or config['env']['nRows']
@@ -68,8 +68,10 @@ def renderTrainedAgent(
         max_steps=config['env']['maxSteps'],
         max_misses=config['env']['maxMisses'],
         observation_type=config['env']['obsType'],
-        seed=config['seed'],
+        seed=config['exp']['seed'],
     )
+
+    torch.manual_seed(config['exp']['seed'])
 
     # create dummy model to be overwritten later
     model = LinearModel(inputSize=env.stateSize, outputSize=env.actionSize)
@@ -79,10 +81,11 @@ def renderTrainedAgent(
     agent = REINFORCEAgent(
         model = model,
         device = torch.device('cpu'),
-        alpha = config['hyperparams']['alpha'],
-        beta = config['hyperparams']['beta'],
-        gamma = config['hyperparams']['gamma'],
-        delta = config['hyperparams']['delta']
+        alpha = config['agent']['alpha'],
+        beta = config['agent']['beta'],
+        gamma = config['agent']['gamma'],
+        delta = config['agent']['delta'],
+        batchSize = config['agent']['batchSize'],
     )
 
     # set the agent's model to the one loaded from disk

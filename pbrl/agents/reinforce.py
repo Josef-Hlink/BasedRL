@@ -235,12 +235,7 @@ class REINFORCEAgent:
         self._maR += r / self._uI
         self._maL += l / self._uI
         if (i+1) % self._uI == 0:
-            if self._V:
-                self.iterator.updateMetrics(r=self._maR, l=self._maL)
-            else:
-                status = f'episode {i + 1} / {self._nE} | r: {self._maR:.2f} | l: {self._maL:.2f}'
-                print(f'\r{status}' + ' ' * (79-len(status)), end='', flush=True)
-                if (i+1) == self._nE: print('\nfinished training')
+            if self._V: self.iterator.updateMetrics(r=self._maR, l=self._maL)
             self._maR, self._maL = 0, 0
         if self._W:
             wandb.log(dict(reward=r, lr=self.optimizer.param_groups[0]['lr'], loss=l), step=i)
@@ -248,10 +243,12 @@ class REINFORCEAgent:
 
     def _logFinal(self) -> None:
         """ Handles all logging after training. """
-        if self._V: self.iterator.finish()
-        else: print()
-        if self.converged: print('converged!')
-        print(f'avg. reward: {self._tR / self._nE:.2f} | avg. loss: {self._tL / self._nE:.2f}')
+        if not self._V: return
+        if self.converged:
+            print('converged!')
+            self.iterator.finish()
+        print(f'avg. reward: {self._tR / self._nE:.2f}')
+        print(f'avg. loss: {self._tL / self._nE:.2f}')
         return
 
     def _castState(self, state: np.ndarray | torch.Tensor, flatten: bool = False) -> torch.Tensor:

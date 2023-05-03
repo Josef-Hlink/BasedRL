@@ -16,7 +16,7 @@ import wandb
 
 def main():
     
-    config, device = _initCLI()
+    config, device = _initRun()
 
     # flags
     V, D, S = config.flags.verbose, config.flags.debug, config.flags.saveModel
@@ -61,8 +61,8 @@ def main():
     
     return
 
-def _initCLI() -> tuple[DotDict, torch.device]:
-    """ Sets up the experiment.
+def _initRun() -> tuple[DotDict, torch.device]:
+    """ Sets up the experiment run.
 
     1. parses args
     2. sets random seed for torch
@@ -140,8 +140,8 @@ def _initCLI() -> tuple[DotDict, torch.device]:
         )),
     ))
 
-    # create paths
-    for path in P.paths:
+    # create gitignored paths
+    for path in P.ignored:
         path.mkdir(exist_ok=True, parents=True)
 
     # initialize wandb
@@ -185,7 +185,7 @@ def _saveModel(config: DotDict, agent: REINFORCEAgent) -> None:
     # stdout messages
     print(f'Saved model to {path.parent}/{bold(path.name)}')
     print(f'To render the model, run the following command:')
-    print(f'render {config.runID}')
+    print(f'pbrl-render {config.runID}')
     return
 
 if __name__ == '__main__':

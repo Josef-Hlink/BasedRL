@@ -5,6 +5,7 @@ docs
 .vscode
 .ipynb_checkpoints
 results
+wandb
 
 # project stuff
 pbrl.egg-info

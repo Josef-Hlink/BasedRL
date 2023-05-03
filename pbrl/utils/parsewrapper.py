@@ -3,7 +3,7 @@
 
 from argparse import ArgumentParser
 
-from pbrl.utils import UC, DotDict, bold, generateRunID, generateSeed
+from pbrl.utils import UC, DotDict, bold, generateID, generateSeed
 
 
 class ParseWrapper:
@@ -38,7 +38,7 @@ class ParseWrapper:
 
         # --- wandb --- #
         parser.add_argument('--offline', dest='offline', action='store_true', help='Offline mode (no wandb functionality)')
-        parser.add_argument('-PID', dest='projectID', default='bl', help='Project ID')
+        parser.add_argument('-PID', dest='projectID', default='glob', help='Project ID')
         parser.add_argument('-RID', dest='runID', default=None, help='Run ID')
 
         # --- environment --- #
@@ -79,7 +79,7 @@ class ParseWrapper:
         """ Resolves default values for exploration value and run ID. """
         resolvedArgs = args.copy()
         if args['runID'] is None and args['offline']:
-            resolvedArgs['runID'] = generateRunID()
+            resolvedArgs['runID'] = generateID()
         if args['seed'] is None:
             resolvedArgs['seed'] = generateSeed()
         return DotDict(resolvedArgs)

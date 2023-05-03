@@ -1,0 +1,36 @@
+nEpisodes:
+  value:
+    100
+seed:
+  value:
+    null
+alpha:
+  values:
+    [0.0001, 0.001]
+beta:
+  values:
+    [0.1, 0.2]
+gamma:
+  value:
+    0.8
+delta:
+  values:
+    [0.99, 0.999]
+obsType: 
+  value:
+    pixel
+nRows:
+  value:
+    7
+nCols:
+  value:
+    7
+speed:
+  value:
+    1.0
+maxSteps:
+  value:
+    250
+maxMisses:
+  value:
+    10

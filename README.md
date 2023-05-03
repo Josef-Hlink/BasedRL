@@ -21,5 +21,10 @@ Contributors:
 
 ## Usage
 
-After building the project, the `pbrl` command should be available.
-Run `pbrl --help` to see the available commands.
+After building the project, the following commands are available:
+
+- `pbrl-run` to run a single experiment
+- `pbrl-render` to render the results of a single experiment (if it was saved)
+- `pbrl-sweep` to run a sweep of experiments using [wandb](https://wandb.ai/)
+
+To see what arguments each command takes, run the command with either the `-h` or `--help` flag.

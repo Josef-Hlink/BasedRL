@@ -8,7 +8,7 @@ import warnings
 from pbrl.agents import REINFORCEAgent
 from pbrl.agents.models import LinearModel
 from pbrl.environment import CatchEnvironment
-from pbrl.utils import ParseWrapper, P, DotDict, bold
+from pbrl.utils import ParseWrapper, P, UC, DotDict, bold
 
 import torch
 import wandb
@@ -19,9 +19,8 @@ def main():
     config, device = _initRun()
 
     # set flag variables
-    D, S, T = config.flags.debug, config.flags.saveModel, config.flags.trackModel
-    V = not config.flags.quiet
-    W = not config.flags.offline
+    flags = config.flags
+    Q, D, S, T, W = flags.quiet, flags.debug, flags.saveModel, flags.trackModel, flags.wandb
 
     # initialize environment
     env = CatchEnvironment(
@@ -51,14 +50,20 @@ def main():
     )
 
     # train agent
-    agent.train(env, config.exp.nEpisodes, V, D, W, T)
+    if not Q: print(UC.hd * 80)
+    agent.train(env, config.exp.nTrainEps, Q, D, W, T)
 
-    if S:
-        _saveModel(config, agent)
+    # evaluate agent
+    evalReward = agent.evaluate(env, config.exp.nEvalEps)
+    if not Q: print(f'avg. evaluation reward: {evalReward:.2f}')
+    
+    if S: _saveModel(config, agent)
+
+    if not Q: print(UC.hd * 80)
 
     if W:
-        # tell wandb wether or not the agent has converged
         wandb.run.summary['converged'] = agent.converged
+        wandb.run.summary['evalReward'] = evalReward
         wandb.finish()
     
     return
@@ -76,29 +81,31 @@ def _initRun() -> tuple[DotDict, torch.device]:
     ### Returns
     `DotDict` config: the parsed config containing all information about the experiment
     ```
-    projectID: str
-    runID: str
-    nEpisodes: int
-    nRuns: int
-    seed: int
-    hyperparams:
+    exp:
+        projectID: str
+        runID: str
+        nTrainEps: int
+        nEvalEps: int
+        seed: int
+    agent:
         alpha: float
         beta: float
         gamma: float
         delta: float
-    flags:
-        verbose: bool
-        debug: bool
-        offline: bool
-        gpu: bool
-        saveModel: bool
+        batchSize: int
     env:
-        obsType: Literal['pixel', 'vector']
+        obsType: str
         nRows: int
         nCols: int
         speed: float
         maxSteps: int
         maxMisses: int
+    flags:
+        quiet: bool
+        debug: bool
+        wandb: bool
+        saveModel: bool
+        trackModel: bool
     ```
     `torch.device` device: the device to run on
     """
@@ -121,7 +128,7 @@ def _initRun() -> tuple[DotDict, torch.device]:
         path.mkdir(exist_ok=True, parents=True)
 
     # initialize wandb
-    if not config.flags.offline:
+    if config.flags.wandb:
         wandb.init(
             dir = P.wandb,
             project = config.exp.projectID,

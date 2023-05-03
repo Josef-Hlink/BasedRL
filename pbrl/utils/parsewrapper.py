@@ -12,17 +12,17 @@ class ParseWrapper:
         """ Adds arguments to the passed parser object and parses them. """
         
         # --- experiment --- #
-        parser.add_argument('-ne', dest='nEpisodes',
+        parser.add_argument('-PID', dest='projectID', default='glob', help='Project ID')
+        parser.add_argument('-RID', dest='runID', default=None, help='Run ID')
+        parser.add_argument('-te', dest='nTrainEps',
             type=int, default=2500, help='Number of episodes to train for'
         )
-        parser.add_argument('-nr', dest='nRuns',
-            type=int, default=1, help='Number of runs to average over'
+        parser.add_argument('-ee', dest='nEvalEps',
+            type=int, default=10, help='Number of episodes to evaluate on'
         )
         parser.add_argument('-sd', dest='seed',
             type=int, default=None, help='Seed for random number generators'
         )
-        parser.add_argument('-PID', dest='projectID', default='glob', help='Project ID')
-        parser.add_argument('-RID', dest='runID', default=None, help='Run ID')
         
         # --- agent --- #
         parser.add_argument('-a', dest='alpha', 
@@ -53,9 +53,9 @@ class ParseWrapper:
         parser.add_argument('-G', dest='gpu', action='store_true', help='Try to use GPU')
         parser.add_argument('-Q', dest='quiet', action='store_true', help='Mute all output')
         parser.add_argument('-D', dest='debug', action='store_true', help='Print debug statements')
+        parser.add_argument('-W', dest='wandb', action='store_true', help='Use wandb for logging')
         parser.add_argument('-S', dest='saveModel', action='store_true', help='Save model(s) to disk')
         parser.add_argument('-T', dest='trackModel', action='store_true', help='Track model in wandb')
-        parser.add_argument('-O', dest='offline', action='store_true', help='Offline mode (no wandb functionality)')
 
         # --- parsing --- #
         self.defaultConfig = self.createConfig(parser.parse_args([]))
@@ -74,33 +74,33 @@ class ParseWrapper:
         """ Creates a nested DotDict config from the passed parsed arguments. """
         config = DotDict(
             exp = DotDict(
-                nEpisodes = args.nEpisodes,
-                nRuns = args.nRuns,
-                seed = args.seed,
                 projectID = args.projectID,
-                runID = args.runID
+                runID = args.runID,
+                nTrainEps = args.nTrainEps,
+                nEvalEps = args.nEvalEps,
+                seed = args.seed,
             ),
             agent = DotDict(
                 alpha = args.alpha,
                 beta = args.beta,
                 gamma = args.gamma,
                 delta = args.delta,
-                batchSize = args.batchSize
+                batchSize = args.batchSize,
             ),
             env = DotDict(
                 obsType = args.envType,
                 nRows = args.envRows,
                 nCols = args.envCols,
-                speed = args.envSpeed
+                speed = args.envSpeed,
             ),
             flags = DotDict(
                 gpu = args.gpu,
                 quiet = args.quiet,
                 debug = args.debug,
+                wandb = args.wandb,
                 saveModel = args.saveModel,
                 trackModel = args.trackModel,
-                offline = args.offline
-            )
+            ),
         )       
         return config
 
@@ -133,13 +133,12 @@ class ParseWrapper:
         """ Checks the validity of all passed values for the experiment. """
 
         # --- experiment --- #
-        assert 100 <= self.config.exp.nEpisodes <= 1e5, \
-            'Number of episodes must be in [100 .. 100,000]'
-        assert 1 <= self.config.exp.nRuns <= 10, \
-            'Number of runs must be in [1 .. 10]'
+        assert 100 <= self.config.exp.nTrainEps <= 1e5, \
+            'Number of training episodes must be in [100 .. 100,000]'
+        assert 10 <= self.config.exp.nEvalEps <= 1e3, \
+            'Number of evaluation episodes must be in [10 .. 1,000]'
         assert 0 <= self.config.exp.seed < 1e8, \
             'Seed must be in [0 .. 100,000,000)'
-        
         
         # --- agent --- #
         assert 0 < self.config.agent.alpha <= 1, \
@@ -164,7 +163,8 @@ class ParseWrapper:
             'Speed of the ball in the environment must be in [0.1 .. 10]'
         
         # --- flags --- #
-        assert not (self.config.flags.offline and self.config.flags.trackModel), \
-            'Cannot track model in offline mode'
+        if self.config.flags.trackModel:
+            assert self.config.flags.wandb, \
+                'Model tracking requires wandb'
         
         return

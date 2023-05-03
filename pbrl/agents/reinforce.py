@@ -54,21 +54,21 @@ class REINFORCEAgent:
 
     def train(self,
         env: CatchEnvironment, nEpisodes: int,
-        V: bool = False, D: bool = False, W: bool = False, T: bool = False,
+        Q: bool = False, D: bool = False, W: bool = False, T: bool = False,
     ) -> None:
         """ Trains the agent on an environment for a given number of episodes.
         
         ### Args
         `CatchEnvironment` env: environment to train on
         `int` nEpisodes: number of episodes to train for
-        `bool` V: toggle verbose printing
+        `bool` Q: toggle information printing
         `bool` D: toggle debug printing
         `bool` W: toggle wandb logging
         `bool` T: toggle wandb model tracking
         """
 
         # initialize training
-        self._initTrain(nEpisodes, V, W, T)
+        self._initTrain(nEpisodes, Q, W, T)
 
         for episode in self.iterator:
 
@@ -93,6 +93,23 @@ class REINFORCEAgent:
 
         return
     
+    def evaluate(self, env: CatchEnvironment, nEpisodes: int, R: bool = False) -> float:
+        """ Evaluates the agent on an environment on a given number of episodes.
+
+        ### Args
+        `CatchEnvironment` env: environment to evaluate for
+        `int` nEpisodes: number of episodes to evaluate on
+        `bool` R: toggle rendering
+
+        ### Returns
+        `float` avgReward: average reward over the evaluation episodes
+        """
+        avgReward = 0
+        for _ in range(nEpisodes):
+            transitionBatch = self._sampleEpisode(env, R)
+            avgReward += transitionBatch.totalReward / nEpisodes
+        return avgReward
+
     def saveModel(self, path: Path) -> None:
         """ Saves the model's parameters to the given path. """
         torch.save(self.model.state_dict(), path)
@@ -105,7 +122,7 @@ class REINFORCEAgent:
     
     def chooseAction(self, state: np.ndarray) -> int:
         """ Chooses an action to take based on the current policy. """
-        state = self._castState(state, flatten=True)
+        state = self._castState(state)
         return torch.distributions.Categorical(self.model(state)).sample().item()
 
     @property
@@ -117,7 +134,7 @@ class REINFORCEAgent:
     # PRIVATE #
     ###########
 
-    def _initTrain(self, nEpisodes: int, V: bool, W: bool, T: bool) -> None:
+    def _initTrain(self, nEpisodes: int, Q: bool, W: bool, T: bool) -> None:
         """ Sets up the necessary variables for the training loop.
 
         1. Initializes some private variables
@@ -127,7 +144,7 @@ class REINFORCEAgent:
 
         ### Args
         `int` nEpisodes: number of episodes to train for
-        `bool` V: whether to use the progress bar, or just use a `range` object to iterate over episodes
+        `bool` Q: whether to use a progress bar or not
         `bool` W: whether to log anything with wandb
         `bool` T: whether to track the model with wandb
         """
@@ -138,12 +155,12 @@ class REINFORCEAgent:
         self._uI = self._nE // 100   # update interval
         self._tR, self._tL = 0, 0    # total reward and loss
         self._maR, self._maL = 0, 0  # moving averages for reward and loss
-        self._V, self._W = V, W      # whether to use progress bar and wandb
+        self._Q, self._W = Q, W      # whether to use progress bar and wandb
         
         if W and T: wandb.watch(self.model, log='all', log_freq=self._uI)
         
-        if V: self.iterator = ProgressBar(self._nE, updateInterval=self._uI, metrics=['r', 'l'])
-        else: self.iterator = range(self._nE)
+        if Q: self.iterator = range(self._nE)
+        else: self.iterator = ProgressBar(self._nE, updateInterval=self._uI, metrics=['r', 'l'])
         
         self.scheduler = torch.optim.lr_scheduler.StepLR(
             self.optimizer,
@@ -153,17 +170,18 @@ class REINFORCEAgent:
         
         return
 
-    def _sampleEpisode(self, env: CatchEnvironment) -> TransitionBatch:
+    def _sampleEpisode(self, env: CatchEnvironment, R: bool = False) -> TransitionBatch:
         """ Samples an episode from the environment and returns the sampled transitions in a `TransitionBatch`. """
         tB = TransitionBatch()
-        state = self._castState(env.reset(), flatten=True)
+        state = self._castState(env.reset())
         done = False
         while not done:
             action = self.chooseAction(state)
             next_state, reward, done, _ = env.step(action)
-            next_state = self._castState(next_state, flatten=True)
+            next_state = self._castState(next_state)
             tB.add(Transition(state, action, reward, next_state, done))
             state = next_state
+            if R: env.render()
         return tB
 
     def _learn(self, tB: TransitionBatch) -> float:
@@ -235,7 +253,7 @@ class REINFORCEAgent:
         self._maR += r / self._uI
         self._maL += l / self._uI
         if (i+1) % self._uI == 0:
-            if self._V: self.iterator.updateMetrics(r=self._maR, l=self._maL)
+            if not self._Q: self.iterator.updateMetrics(r=self._maR, l=self._maL)
             self._maR, self._maL = 0, 0
         if self._W:
             wandb.log(dict(reward=r, lr=self.optimizer.param_groups[0]['lr'], loss=l), step=i)
@@ -243,7 +261,7 @@ class REINFORCEAgent:
 
     def _logFinal(self) -> None:
         """ Handles all logging after training. """
-        if not self._V: return
+        if self._Q: return
         if self.converged:
             print('converged!')
             self.iterator.finish()
@@ -251,13 +269,13 @@ class REINFORCEAgent:
         print(f'avg. loss: {self._tL / self._nE:.2f}')
         return
 
-    def _castState(self, state: np.ndarray | torch.Tensor, flatten: bool = False) -> torch.Tensor:
+    def _castState(self, state: np.ndarray | torch.Tensor) -> torch.Tensor:
         """ Cast numpy array or a torch tensor to a torch tensor on the correct device.
-        If `flatten`, the tensor is cast to a 1D tensor.
+        If the dimension of the state is 3, it is flattened.
         """
         if isinstance(state, np.ndarray):
             state = torch.from_numpy(state).to(self.device)
-        if flatten:
+        if state.ndim == 3:
             state = state.flatten()
         return state
 

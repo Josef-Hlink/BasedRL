@@ -18,7 +18,7 @@ def main():
     argParser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # basics
     argParser.add_argument('runID', help='ID of the run to render')
-    argParser.add_argument('-n', dest='nEpisodes', default=1, help='Number of episodes to run for')
+    argParser.add_argument('-n', dest='nEpisodes', type=int, default=1, help='Number of episodes to run for')
     # environment
     argParser.add_argument('-r', dest='nRows', type=int, default=None,
         help='Number of rows in the environment (overrides config)'
@@ -35,10 +35,7 @@ def main():
     renderTrainedAgent(args.runID, args.nEpisodes, args.nRows, args.nCols, args.speed)
     return
 
-def renderTrainedAgent(
-    runID: str, nEpisodes: int,
-    nRows: int = None, nCols: int = None, speed: float = None
-) -> None:
+def renderTrainedAgent(runID: str, nEpisodes: int, nRows: int = None, nCols: int = None, speed: float = None) -> None:
     """ Loads the agent's model from disk and renders it.
     
     Args:
@@ -62,13 +59,13 @@ def renderTrainedAgent(
 
     # load environment
     env = CatchEnvironment(
-        rows=nRows,
-        columns=nCols,
-        speed=speed,
-        max_steps=config['env']['maxSteps'],
-        max_misses=config['env']['maxMisses'],
-        observation_type=config['env']['obsType'],
-        seed=config['exp']['seed'],
+        rows = nRows,
+        columns = nCols,
+        speed = speed,
+        max_steps = config['env']['maxSteps'],
+        max_misses = config['env']['maxMisses'],
+        observation_type = config['env']['obsType'],
+        seed = config['exp']['seed'],
     )
 
     torch.manual_seed(config['exp']['seed'])
@@ -91,23 +88,10 @@ def renderTrainedAgent(
     # set the agent's model to the one loaded from disk
     agent.loadModel(P.models / runID / 'model.pth')
 
-    _render(env, agent, nEpisodes)
+    print(f'Rendering {nEpisodes} episode(s)...')
+    reward = agent.evaluate(env, nEpisodes, R=True)
+    print(f'avg. reward: {reward:.2f}')
 
-    return
-
-def _render(env: CatchEnvironment, agent: REINFORCEAgent, nEpisodes: int) -> None:
-    """ Renders the agent's behaviour for a given number of episodes. """
-    if nEpisodes == 1:
-        print('Rendering 1 episode...')
-    else:
-        print(f'Rendering {nEpisodes} episodes...')
-    
-    for _ in range(nEpisodes):
-        state, done = env.reset(), False
-        while not done:
-            action = agent.chooseAction(state)
-            state, _, done, _ = env.step(action)
-            env.render()
     return
 
 

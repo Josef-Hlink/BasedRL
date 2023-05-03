@@ -107,10 +107,11 @@ def run():
             beta = config.beta,
             gamma = config.gamma,
             delta = config.delta,
+            batchSize = config.batchSize,
         )
 
         # train agent
-        agent.train(env, config.nEpisodes, V=False, D=False, W=True)
+        agent.train(env, config.nEpisodes, Q=True, D=False, W=True)
 
         # tell wandb wether or not the agent has converged
         wandb.run.summary['converged'] = agent.converged

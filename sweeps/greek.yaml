@@ -16,6 +16,9 @@ gamma:
 delta:
   values:
     [0.99, 0.995, 0.9975, 0.999]
+batchSize:
+  value:
+    1
 obsType:
   value:
     pixel

@@ -11,3 +11,8 @@ agent:
   batchSize: [1, 2, 4, 8, 16, 32]
 env:
   obsType: [pixel, vector]
+sweep:
+  method: random
+  metric: evalReward
+  totalRuns: 100
+  count: 10

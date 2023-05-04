@@ -1,11 +1,31 @@
 exp:
   agentType: RF
-  nTrainEps: 500
-  nEvalEps: 10
-  seed: null
+  nTrainEps: 1000
+  nEvalEps: 100
+  seed: 12345678
 agent:
-  alpha: [0.0001, 0.001]
-  beta: [0.1, 0.2]
-  delta: [0.99, 0.999]
+  alpha:
+    distribution: uniform
+    min: 0.0001
+    max: 0.0025
+  beta:
+    distribution: uniform
+    min: 0.0
+    max: 0.4
+  gamma:
+    distribution: uniform
+    min: 0.7
+    max: 0.99
+  delta:
+    distribution: uniform
+    min: 0.95
+    max: 0.999
+  batchSize:
+    [4, 8, 16, 32, 64, 128]
 env:
   null
+sweep:
+  method: bayes
+  metric: evalReward
+  totalRuns: 12
+  count: 2

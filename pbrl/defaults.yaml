@@ -16,3 +16,8 @@ env:
   speed: 1.0
   maxSteps: 250
   maxMisses: 10
+sweep:
+  method: random
+  metric: evalReward
+  totalRuns: 500
+  count: 50

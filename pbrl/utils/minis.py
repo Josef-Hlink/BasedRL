@@ -46,6 +46,12 @@ class DotDict(dict):
     def copy(self):
         return DotDict(super().copy())
 
+    def pop(self, key, default=None):
+        if key in self:
+            return super().pop(key)
+        else:
+            return default
+
     def toDict(self) -> dict:
         """ Converts the DotDict to a regular dict recursively. """
         dct = {}

@@ -66,7 +66,13 @@ def main():
     return
 
 def generateScript(sweepID: str, projectName: str, totalRuns: int, count: int) -> str:
-    """ Generate a bash script using `xargs` that runs multiple agents in parallel. """
+    """ Generate a bash script using `xargs` that runs multiple agents in parallel.
+    
+    Example for 50 runs per agent, total 1400 runs, 16 CPU cores:
+    ```bash
+    seq 1 28 | xargs -I {} -P 14 sh -c 'pbrl-sweep run <sweepID> -PN <projectName> -c 50'
+    ```
+    """
     nWorkers = cpu_count() - 2
     script = ""
     script += f"seq 1 {totalRuns//count} | xargs -I {{}} -P {nWorkers} sh -c "

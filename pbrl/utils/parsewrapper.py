@@ -11,9 +11,18 @@ class ParseWrapper:
     def __init__(self, parser: argparse.ArgumentParser):
         """ Adds arguments to the passed parser object and parses them. """
         
+        parser.description = 'Run an experiment with a PBRL agent.'
+
         # --- experiment --- #
-        parser.add_argument('-PID', dest='projectID', default='glob', help='Project ID')
-        parser.add_argument('-RID', dest='runID', default=None, help='Run ID')
+        parser.add_argument('-PID', dest='projectID',
+            type=str, default='glob', help='Project ID'
+        )
+        parser.add_argument('-RID', dest='runID',
+            type=str, default=None, help='Run ID'
+        )
+        parser.add_argument('-at', dest='agentType',
+            type=str, default='RF', choices=['RF', 'AC'], help='Type of agent'
+        )
         parser.add_argument('-te', dest='nTrainEps',
             type=int, default=2500, help='Number of episodes to train for'
         )
@@ -74,6 +83,7 @@ class ParseWrapper:
         """ Creates a nested DotDict config from the passed parsed arguments. """
         config = DotDict(
             exp = DotDict(
+                agentType = args.agentType,
                 projectID = args.projectID,
                 runID = args.runID,
                 nTrainEps = args.nTrainEps,
@@ -123,7 +133,7 @@ class ParseWrapper:
 
     def resolveDefaultNones(self) -> None:
         """ Resolves default values for exploration value and run ID. """
-        if self.config.exp.runID is None and self.config.flags.offline:
+        if self.config.exp.runID is None and not self.config.flags.wandb:
             self.config.exp.runID = generateID()
         if self.config.exp.seed is None:
             self.config.exp.seed = generateSeed()

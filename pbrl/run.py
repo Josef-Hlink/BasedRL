@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import yaml
 import argparse
-import warnings
+import yaml
+from typing import Type
 
-from pbrl.agents import REINFORCEAgent
-from pbrl.agents.models import LinearModel
+from pbrl.agents import PBAgent, REINFORCEAgent, ActorCriticAgent
+from pbrl.agents.models import ActorModel, CriticModel
 from pbrl.environment import CatchEnvironment
 from pbrl.utils import ParseWrapper, P, UC, DotDict, bold
 
@@ -33,20 +33,33 @@ def main():
         seed = config.exp.seed,
     )
 
-    # initialize model
-    model = LinearModel(inputSize=env.stateSize, outputSize=env.actionSize)
+    # initialize actor model
+    actor = ActorModel(inputSize=env.stateSize, outputSize=env.actionSize)
+    
+    # get correct agent type
+    Agent = Type[PBAgent]
+
+    if config.exp.agentType == 'RF':
+        Agent = REINFORCEAgent
+        critic = None
+    elif config.exp.agentType == 'AC':
+        Agent = ActorCriticAgent
+        critic = CriticModel(inputSize=env.stateSize, outputSize=1)
+    else:
+        raise NotImplementedError(f'Agent type {config.exp.agentType} not implemented')
 
     # initialize agent
-    agent = REINFORCEAgent(
-        # torch
-        model = model,
-        device = device,
+    agent = Agent(
         # hyperparameters
         alpha = config.agent.alpha,
         beta = config.agent.beta,
         gamma = config.agent.gamma,
         delta = config.agent.delta,
         batchSize = config.agent.batchSize,
+        # torch
+        device = device,
+        actor = actor,
+        critic = critic,
     )
 
     # train agent
@@ -57,7 +70,7 @@ def main():
     evalReward = agent.evaluate(env, config.exp.nEvalEps)
     if not Q: print(f'avg. evaluation reward: {evalReward:.2f}')
     
-    if S: _saveModel(config, agent)
+    if S: _saveModels(config, agent)
 
     if not Q: print(UC.hd * 80)
 
@@ -145,14 +158,14 @@ def _initRun() -> tuple[DotDict, torch.device]:
         if torch.cuda.is_available():
             device = torch.device('cuda')
         else:
-            warnings.warn('CUDA not found, using CPU')
+            print(f'{bold("Warning")}: CUDA not found, using CPU')
             device = torch.device('cpu')
     else:
         device = torch.device('cpu')
 
     return config, device
 
-def _saveModel(config: DotDict, agent: REINFORCEAgent) -> None:
+def _saveModels(config: DotDict, agent: REINFORCEAgent) -> None:
     """ Handles model saving logic and stdout messages. """    
     # create normal config for yaml
     normalConfig = dict(
@@ -166,13 +179,13 @@ def _saveModel(config: DotDict, agent: REINFORCEAgent) -> None:
     path.mkdir(parents=True, exist_ok=True)
     # save config
     if (path / 'config.yaml').exists():
-        warnings.warn(f'Overwriting existing config file for run {bold(config.exp.runID)}')
+        print(f'{bold("Warning")}: Overwriting existing config file for run {bold(config.exp.runID)}')
     with open(path / 'config.yaml', 'w') as f:
         yaml.dump(normalConfig, f)
-    # save model
-    if (path / 'model.pth').exists():
-        warnings.warn(f'Overwriting existing model file for run {bold(config.exp.runID)}')
-    agent.saveModel(path / 'model.pth')
+    # save models
+    if (path / 'actor.pth').exists():
+        print(f'{bold("Warning")}: Overwriting existing model file for run {bold(config.exp.runID)}')
+    agent.saveModels(path)
     # stdout messages
     print(f'Saved model to {path.parent}/{bold(path.name)}')
     print(f'To render the model, run the following command:')

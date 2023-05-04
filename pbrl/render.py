@@ -3,11 +3,12 @@
 
 import argparse
 import yaml
+from typing import Type
 
 from pbrl.utils import P, DotDict
 from pbrl.environment import CatchEnvironment
-from pbrl.agents.models import LinearModel
-from pbrl.agents import REINFORCEAgent
+from pbrl.agents.models import ActorModel, CriticModel
+from pbrl.agents import PBAgent, REINFORCEAgent, ActorCriticAgent
 
 import torch
 
@@ -70,23 +71,35 @@ def renderTrainedAgent(runID: str, nEpisodes: int, nRows: int = None, nCols: int
 
     torch.manual_seed(config['exp']['seed'])
 
-    # create dummy model to be overwritten later
-    model = LinearModel(inputSize=env.stateSize, outputSize=env.actionSize)
+    actor = ActorModel(inputSize=env.stateSize, outputSize=env.actionSize)
 
-    # load agent
-    # TODO: add other kinds of agents
-    agent = REINFORCEAgent(
-        model = model,
-        device = torch.device('cpu'),
+    Agent = Type[PBAgent]
+
+    if config['exp']['agentType'] == 'RF':
+        Agent = REINFORCEAgent
+        critic = None
+    elif config['exp']['agentType'] == 'AC':
+        Agent = ActorCriticAgent
+        critic = CriticModel(inputSize=env.stateSize, outputSize=1)
+    else:
+        raise ValueError(f'Unknown agent type: {config["exp"]["agentType"]}')
+    
+    # initialize agent
+    agent = Agent(
+        # hyperparameters
         alpha = config['agent']['alpha'],
         beta = config['agent']['beta'],
         gamma = config['agent']['gamma'],
         delta = config['agent']['delta'],
         batchSize = config['agent']['batchSize'],
+        # torch
+        actor = actor,
+        critic = critic,
+        device = torch.device('cpu'),
     )
 
-    # set the agent's model to the one loaded from disk
-    agent.loadModel(P.models / runID / 'model.pth')
+    # set the agent's models' parameters to the one loaded from disk
+    agent.loadModels(P.models / runID)
 
     print(f'Rendering {nEpisodes} episode(s)...')
     reward = agent.evaluate(env, nEpisodes, R=True)

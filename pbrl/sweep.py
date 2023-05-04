@@ -37,9 +37,6 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('command', type=str, choices=['init', 'run'], help=commandHelp)
     parser.add_argument('arg', type=str, help=argHelp)
-    parser.add_argument('-PN', dest='projectName',
-        type=str, default='glob', help='Name of the project where the sweep will live'
-    )
     parser.add_argument('-SN', dest='sweepName',
         type=str, default=None, help='Name of the sweep'
     )
@@ -52,20 +49,20 @@ def main():
     if args.command == 'init':
         configFileName = args.arg
         sweepName = args.sweepName if args.sweepName is not None else generateID()
-        sweepID, totalRuns, count = initSweep(configFileName, args.projectName, sweepName)
+        sweepID, totalRuns, count = initSweep(configFileName, sweepName)
         print(UC.hd * 80)
         print('To start multiple agents for this sweep, run the following command:')
-        print(generateScript(sweepID, args.projectName, totalRuns, count))
+        print(generateScript(sweepID, totalRuns, count))
         print(UC.hd * 80)
     
     # running sweep
     elif args.command == 'run':
         sweepID = args.arg
-        runSweep(sweepID, args.projectName, args.count)
+        runSweep(sweepID, args.count)
 
     return
 
-def generateScript(sweepID: str, projectName: str, totalRuns: int, count: int) -> str:
+def generateScript(sweepID: str, totalRuns: int, count: int) -> str:
     """ Generate a bash script using `xargs` that runs multiple agents in parallel.
     
     Example for 50 runs per agent, total 1400 runs, 16 CPU cores:
@@ -76,10 +73,10 @@ def generateScript(sweepID: str, projectName: str, totalRuns: int, count: int) -
     nWorkers = cpu_count() - 2
     script = ""
     script += f"seq 1 {totalRuns//count} | xargs -I {{}} -P {nWorkers} sh -c "
-    script += f"'pbrl-sweep run {sweepID} -PN {projectName} -c {count}'"
+    script += f"'pbrl-sweep run {sweepID} -c {count}'"
     return script
 
-def initSweep(configFileName: str, projectName: str, sweepName: str) -> tuple[str, int, int]:
+def initSweep(configFileName: str, sweepName: str) -> tuple[str, int, int]:
     """ Initializes a sweep from a config file.
     Returns the sweep ID, the total number of runs and the number of runs per agent.
     """
@@ -113,18 +110,18 @@ def initSweep(configFileName: str, projectName: str, sweepName: str) -> tuple[st
 
     sweepID = wandb.sweep(
         sweepConfig,
-        project = f'pbrl-sweeps-{projectName}',
+        project = f'pbrl-sweeps',
     )
 
     return sweepID, config.sweep.totalRuns, config.sweep.count
 
-def runSweep(sweepID: str, projectName: str, count: int) -> None:
+def runSweep(sweepID: str, count: int) -> None:
     """ Run a sweep from a sweep ID. """
     wandb.agent(
         sweep_id = sweepID,
         function = performSingleRun,
         count = count,
-        project = f'pbrl-sweeps-{projectName}',
+        project = f'pbrl-sweeps',
     )
     return
 
@@ -194,9 +191,8 @@ def performSingleRun():
 
 def parseConfig(config: DotDict) -> dict:
     """ Make config compatible with wandb sweep format.
-    1. Removes sweep parameters.
-    2. Puts "parameters" before all level-1 values.
-    3. Calls `parseParameters` on all level-2 values.
+    1. Puts "parameters" before all level-1 values.
+    2. Calls `parseParameters` on all level-2 values.
 
     Example:
     ```yaml
@@ -229,7 +225,6 @@ def parseConfig(config: DotDict) -> dict:
     ```
     """
     parsedConfig = DotDict()
-    parsedConfig.pop('sweep')
     for key, value in config.items():
         parsedConfig[key] = DotDict(parameters=parseParameters(DotDict(value)))
     return parsedConfig.toDict()

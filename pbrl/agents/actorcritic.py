@@ -208,7 +208,7 @@ class ActorCriticAgent(PBAgent):
     def _logFinal(self) -> None:
         """ Handles all logging after training. """
         super()._logFinal()
-        print(f'avg. value loss: {self._tVL / self._nE:.3f}')
+        if not self._Q: print(f'avg. value loss: {self._tVL / self._nE:.3f}')
         return        
 
     def _castState(self, state: np.ndarray | torch.Tensor) -> torch.Tensor:

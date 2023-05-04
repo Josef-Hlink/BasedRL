@@ -20,7 +20,7 @@ def main():
 
     # set flag variables
     flags = config.flags
-    Q, D, S, T, W = flags.quiet, flags.debug, flags.saveModel, flags.trackModel, flags.wandb
+    Q, D, S, T, W = flags.quiet, flags.debug, flags.saveModels, flags.trackModels, flags.wandb
 
     # initialize environment
     env = CatchEnvironment(
@@ -118,8 +118,8 @@ def _initRun() -> tuple[DotDict, torch.device]:
         quiet: bool
         debug: bool
         wandb: bool
-        saveModel: bool
-        trackModel: bool
+        saveModels: bool
+        trackModels: bool
     ```
     `torch.device` device: the device to run on
     """
@@ -131,11 +131,7 @@ def _initRun() -> tuple[DotDict, torch.device]:
     # set random seed for torch
     torch.manual_seed(config.exp.seed)
 
-    defaultEnv = CatchEnvironment()
-
     config.exp.projectID = f'pbrl-{config.exp.projectID}'
-    config.env.maxSteps = defaultEnv.max_steps
-    config.env.maxMisses = defaultEnv.max_misses
 
     # create gitignored paths
     for path in P.ignored:

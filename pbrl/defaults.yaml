@@ -1,7 +1,7 @@
 exp:
   agentType: RF
-  nTrainEps: 100
-  nEvalEps: 10
+  nTrainEps: 2500
+  nEvalEps: 100
   seed: null
 agent:
   alpha: 0.0001

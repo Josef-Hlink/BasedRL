@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import yaml
 
-from pbrl.utils import UC, DotDict, bold, generateID, generateSeed
+from pbrl.utils import P, UC, DotDict, bold, generateID, generateSeed
 
 
 class ParseWrapper:
@@ -13,6 +14,8 @@ class ParseWrapper:
         
         parser.description = 'Run an experiment with a PBRL agent.'
 
+        defaults = self._loadDefaults()
+
         # --- experiment --- #
         parser.add_argument('-PID', dest='projectID',
             type=str, default='glob', help='Project ID'
@@ -21,13 +24,13 @@ class ParseWrapper:
             type=str, default=None, help='Run ID'
         )
         parser.add_argument('-at', dest='agentType',
-            type=str, default='RF', choices=['RF', 'AC'], help='Type of agent'
+            type=str, default=defaults.exp.agentType, choices=['RF', 'AC'], help='Type of agent'
         )
         parser.add_argument('-te', dest='nTrainEps',
-            type=int, default=2500, help='Number of episodes to train for'
+            type=int, default=defaults.exp.nTrainEps, help='Number of episodes to train for'
         )
         parser.add_argument('-ee', dest='nEvalEps',
-            type=int, default=10, help='Number of episodes to evaluate on'
+            type=int, default=defaults.exp.nEvalEps, help='Number of episodes to evaluate on'
         )
         parser.add_argument('-sd', dest='seed',
             type=int, default=None, help='Seed for random number generators'
@@ -35,36 +38,48 @@ class ParseWrapper:
         
         # --- agent --- #
         parser.add_argument('-a', dest='alpha', 
-            type=float, default=0.0001, help=f'Learning rate {bold(UC.a)}'
+            type=float, default=defaults.agent.alpha, help=f'Learning rate {bold(UC.a)}'
         )
         parser.add_argument('-b', dest='beta',
-            type=float, default=0.1, help=f'Entropy regularization coefficient {bold(UC.b)}'
+            type=float, default=defaults.agent.beta, help=f'Entropy regularization coefficient {bold(UC.b)}'
         )
         parser.add_argument('-g', dest='gamma',
-            type=float, default=0.9, help=f'Discount factor {bold(UC.g)}'
+            type=float, default=defaults.agent.gamma, help=f'Discount factor {bold(UC.g)}'
         )
         parser.add_argument('-d', dest='delta',
-            type=float, default=0.995, help=f'Decay rate {bold(UC.d)} for learning rate {bold(UC.a)}'
+            type=float, default=defaults.agent.delta, help=f'Decay rate {bold(UC.d)} for learning rate {bold(UC.a)}'
         )
         parser.add_argument('-bs', dest='batchSize',
-            type=int, default=8, help='Batch size for training'
+            type=int, default=defaults.agent.batchSize, help=f'Batch size for training'
         )
 
         # --- environment --- #
-        parser.add_argument('-et', dest='envType', type=str,
-            default='pixel', choices=['pixel', 'vector'], help='Observation type of the environment'
+        parser.add_argument('-et', dest='envType',
+            type=str, default=defaults.env.obsType, choices=['pixel', 'vector'], help='Observation type of the environment'
         )
-        parser.add_argument('-er', dest='envRows', type=int, default=7, help='Number of rows in the environment')
-        parser.add_argument('-ec', dest='envCols', type=int, default=7, help='Number of columns in the environment')
-        parser.add_argument('-es', dest='envSpeed', type=float, default=1.0, help='Speed of the ball in the environment')
+        parser.add_argument('-er', dest='envRows',
+            type=int, default=defaults.env.nRows, help='Number of rows in the environment'
+        )
+        parser.add_argument('-ec', dest='envCols',
+            type=int, default=defaults.env.nCols, help='Number of columns in the environment'
+        )
+        parser.add_argument('-es', dest='envSpeed',
+            type=float, default=defaults.env.speed, help='Speed of the ball in the environment'
+        )
+        parser.add_argument('-ms', dest='maxSteps',
+            type=int, default=defaults.env.maxSteps, help='Maximum number of steps per episode'
+        )
+        parser.add_argument('-mm', dest='maxMisses',
+            type=int, default=defaults.env.maxMisses, help='Maximum number of misses per episode'
+        )
 
         # --- flags --- #
         parser.add_argument('-G', dest='gpu', action='store_true', help='Try to use GPU')
         parser.add_argument('-Q', dest='quiet', action='store_true', help='Mute all output')
         parser.add_argument('-D', dest='debug', action='store_true', help='Print debug statements')
         parser.add_argument('-W', dest='wandb', action='store_true', help='Use wandb for logging')
-        parser.add_argument('-S', dest='saveModel', action='store_true', help='Save model(s) to disk')
-        parser.add_argument('-T', dest='trackModel', action='store_true', help='Track model in wandb')
+        parser.add_argument('-S', dest='saveModels', action='store_true', help='Save model(s) to disk')
+        parser.add_argument('-T', dest='trackModels', action='store_true', help='Track model(s) in wandb')
 
         # --- parsing --- #
         self.defaultConfig = self.createConfig(parser.parse_args([]))
@@ -102,14 +117,16 @@ class ParseWrapper:
                 nRows = args.envRows,
                 nCols = args.envCols,
                 speed = args.envSpeed,
+                maxSteps = args.maxSteps,
+                maxMisses = args.maxMisses,
             ),
             flags = DotDict(
                 gpu = args.gpu,
                 quiet = args.quiet,
                 debug = args.debug,
                 wandb = args.wandb,
-                saveModel = args.saveModel,
-                trackModel = args.trackModel,
+                saveModels = args.saveModels,
+                trackModels = args.trackModels,
             ),
         )       
         return config
@@ -173,8 +190,21 @@ class ParseWrapper:
             'Speed of the ball in the environment must be in [0.1 .. 10]'
         
         # --- flags --- #
-        if self.config.flags.trackModel:
+        if self.config.flags.trackModels:
             assert self.config.flags.wandb, \
                 'Model tracking requires wandb'
         
         return
+
+    def _loadDefaults(self) -> None:
+        """ Loads default values for almost all arguments.
+        
+        Not PID and RID, they are built different.
+        Also not flags, they are all False.
+        """
+        with open(P.root / 'pbrl' / 'defaults.yaml', 'r') as f:
+            defaults = DotDict(yaml.load(f, Loader=yaml.FullLoader))
+        defaults.exp = DotDict(defaults.exp)
+        defaults.agent = DotDict(defaults.agent)
+        defaults.env = DotDict(defaults.env)
+        return defaults

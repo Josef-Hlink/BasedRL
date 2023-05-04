@@ -1,0 +1,18 @@
+exp:
+  agentType: RF
+  nTrainEps: 100
+  nEvalEps: 10
+  seed: null
+agent:
+  alpha: 0.0001
+  beta: 0.1
+  gamma: 0.9
+  delta: 0.995
+  batchSize: 8
+env:
+  obsType: pixel
+  nRows: 7
+  nCols: 7
+  speed: 1.0
+  maxSteps: 250
+  maxMisses: 10

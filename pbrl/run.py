@@ -97,6 +97,7 @@ def _initRun() -> tuple[DotDict, torch.device]:
     exp:
         projectID: str
         runID: str
+        agentType: str
         nTrainEps: int
         nEvalEps: int
         seed: int
@@ -168,12 +169,6 @@ def _initRun() -> tuple[DotDict, torch.device]:
 def _saveModels(config: DotDict, agent: REINFORCEAgent) -> None:
     """ Handles model saving logic and stdout messages. """    
     # create normal config for yaml
-    normalConfig = dict(
-        exp = dict(config.exp),
-        agent = dict(config.agent),
-        env = dict(config.env),
-        flags = dict(config.flags),
-    )
     # create path
     path = P.models / f'{config.exp.runID}'
     path.mkdir(parents=True, exist_ok=True)
@@ -181,7 +176,7 @@ def _saveModels(config: DotDict, agent: REINFORCEAgent) -> None:
     if (path / 'config.yaml').exists():
         print(f'{bold("Warning")}: Overwriting existing config file for run {bold(config.exp.runID)}')
     with open(path / 'config.yaml', 'w') as f:
-        yaml.dump(normalConfig, f)
+        yaml.dump(config.toDict(), f)
     # save models
     if (path / 'actor.pth').exists():
         print(f'{bold("Warning")}: Overwriting existing model file for run {bold(config.exp.runID)}')

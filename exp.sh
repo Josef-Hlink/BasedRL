@@ -2,10 +2,11 @@
 
 # test different deltas
 
-DEFAULTS="greek -PID greek -c 50"
+DEFAULTS="reinforce -PID RF -c 50"
 
-for i in {0..10}; do
+for i in {1..10}; do
     pbrl-sweep $DEFAULTS -SID $i &
+    sleep 1
 done
 
 wait

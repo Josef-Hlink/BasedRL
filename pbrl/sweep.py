@@ -4,12 +4,13 @@
 import argparse
 import yaml
 from typing import Type
-import random
+from os import cpu_count
 
 from pbrl.agents.models import ActorModel, CriticModel
 from pbrl.agents import PBAgent, REINFORCEAgent, ActorCriticAgent
 from pbrl.environment import CatchEnvironment
-from pbrl.utils import P, DotDict, generateID, generateSeed, bold
+from pbrl.utils import UC, P, DotDict, generateID, bold
+
 
 import torch
 import wandb
@@ -21,74 +22,112 @@ def main():
     for path in P.ignored:
         path.mkdir(exist_ok=True, parents=True)
 
+    commandHelp = f"""
+    | {bold("init")}: initialize a sweep from a config file
+    and generate a bash command to run <SWEEPCOUNT//(cpu_count-2)> agents in parallel |
+    | {bold("run")}: run a sweep from a sweep ID |
+    """
+    argHelp = f"""
+    | {bold("init")}: name of the config file with hyperparameters |
+    | {bold("run")}: sweep ID |
+    """
+
     # parse CLI arguments
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('file', type=str, help='Name of the config file with hyperparameters')
-    parser.add_argument('-PID', dest='projectID', type=str, default='glob', help='Project ID')
-    parser.add_argument('-SID', dest='sweepID', type=str, default=None, help='Run ID')
-    parser.add_argument('-c', '--count', dest='count', type=int, default=5, help='Number of runs in sweep')
-    parser.add_argument('-G', '--gpu', dest='gpu', action='store_true', help='Try to use GPU')
+    parser.add_argument('command', type=str, choices=['init', 'run'], help=commandHelp)
+    parser.add_argument('arg', type=str, help=argHelp)
+    parser.add_argument('-PN', dest='projectName',
+        type=str, default='glob', help='Name of the project where the sweep will live'
+    )
+    parser.add_argument('-SN', dest='sweepName',
+        type=str, default=None, help='Name of the sweep'
+    )
+    parser.add_argument('-sc', '--sweepCount', dest='sweepCount',
+        type=int, default=500, help='Total number of runs for the entire sweep'
+    )
+    parser.add_argument('-ac', '--agentCount', dest='agentCount',
+        type=int, default=50, help='Number of runs for each wandb agent'
+    )
     args = parser.parse_args()
 
+    assert args.sweepCount % args.agentCount == 0, \
+        f"Total number of runs must be divisible by number of runs per agent. " \
+        f"({args.sweepCount} % {args.agentCount} != 0)"
+
+    # initializing sweep
+    if args.command == 'init':
+        configFileName = args.arg
+        sweepName = args.sweepName if args.sweepName is not None else generateID()
+        sweepID = initSweep(configFileName, args.projectName, sweepName)
+        print(UC.hd * 80)
+        print('To start multiple agents for this sweep, run the following command:')
+        print(generateScript(sweepID, args.projectName, args.sweepCount, args.agentCount))
+        print(UC.hd * 80)
+    
+    # running sweep
+    elif args.command == 'run':
+        sweepID = args.arg
+        runSweep(sweepID, args.projectName, args.agentCount)
+
+    return
+
+def generateScript(sweepID: str, projectName: str, sweepCount: int, agentCount: int) -> str:
+    """ Generate a bash script using `xargs` that runs multiple agents in parallel. """
+    nWorkers = cpu_count() - 2
+    script = ""
+    script += f"seq 1 {sweepCount//agentCount} | xargs -I {{}} -P {nWorkers} sh -c "
+    script += f"'pbrl-sweep run {sweepID} -PN {projectName} -ac {agentCount}'"
+    return script
+
+def initSweep(configFileName: str, projectName: str, sweepName: str) -> str:
+    """ Initialize a sweep from a config file. """
+    
     # initialize sweep config
     sweepConfig = dict(
-        name = args.sweepID if args.sweepID is not None else generateID(),
-        method = 'bayes',
+        name = sweepName,
+        method = 'random',
         metric = dict(
             name = 'reward',
             goal = 'maximize',
         ),
     )
 
-    # load default config from BasedRL/pbrl/defaults.yaml file
+    # load default config from BasedRL/pbrl/defaults.yaml
     with open(P.root / 'pbrl' / 'defaults.yaml', 'r') as f:
         defaultConfig = DotDict(yaml.load(f, Loader=yaml.FullLoader))
 
-    # load sweep config from BasedRL/sweeps/<config>.yaml file
-    with open(P.sweeps / f'{args.file}.yaml', 'r') as f:
+    # load sweep config from BasedRL/sweeps/<configFileName>.yaml
+    with open(P.sweeps / f'{configFileName}.yaml', 'r') as f:
         customConfig = DotDict(yaml.load(f, Loader=yaml.FullLoader))
 
     # merge default and custom configs
     config = merge(defaultConfig, customConfig)
 
-    print(f'{bold("SWEEPING OVER")}:')
+    print(f'{bold("Initializing sweep with the following parameters")}:')
     print(config)
-
-    # set seed
-    # NOTE: this seed will appear to be the same for all runs in the sweep
-    #       but it will actually be different for each run
-    #       it is only used to set the RNG, from which we sample the actual seeds for individual runs
-    if config.exp.parameters.seed.value is None:
-        config.exp.parameters.seed.value = generateSeed()
-
-    # set device
-    global DEVICE
-    if args.gpu:
-        if torch.cuda.is_available():
-            DEVICE = torch.device('cuda')
-        else:
-            print(f'{bold("Warning")}: CUDA not found, using CPU')
-            DEVICE = torch.device('cpu')
-    else:
-        DEVICE = torch.device('cpu')
-
-    # set random number generator
-    global RNG
-    RNG = random.Random(config.exp.parameters.seed.value)
 
     # add parameters to sweep config
     sweepConfig['parameters'] = config.toDict()
 
-    # initialize and run sweep
-    wandb.agent(wandb.sweep(
+    sweepID = wandb.sweep(
         sweepConfig,
-        project = f'pbrl-sweeps-{args.projectID}'),
-        function = run,
-        count = args.count
+        project = f'pbrl-sweeps-{projectName}',
     )
 
-def run():
-    """ Perform a single run of the sweep """
+    return sweepID
+
+def runSweep(sweepID: str, projectName: str, count: int) -> None:
+    """ Run a sweep from a sweep ID. """
+    wandb.agent(
+        sweep_id = sweepID,
+        function = performSingleRun,
+        count = count,
+        project = f'pbrl-sweeps-{projectName}',
+    )
+    return
+
+def performSingleRun():
+    """ Perform a single run of the sweep. """
 
     with wandb.init(dir=P.wandb):
 
@@ -99,10 +138,7 @@ def run():
             env = DotDict(wandb.config.env),
         )
 
-        # fix seed
-        seed = RNG.randint(0, 1000000)
-        torch.manual_seed(seed)
-
+        # initialize environment
         env = CatchEnvironment(
             observation_type = config.env.obsType,
             rows = config.env.nRows,
@@ -110,7 +146,7 @@ def run():
             speed = config.env.speed,
             max_steps = config.env.maxSteps,
             max_misses = config.env.maxMisses,
-            seed = seed,
+            seed = None,
         )
 
         # initialize actor model
@@ -137,7 +173,7 @@ def run():
             delta = config.agent.delta,
             batchSize = config.agent.batchSize,
             # torch
-            device = DEVICE,
+            device = torch.device('cpu'),
             actor = actor,
             critic = critic,
         )

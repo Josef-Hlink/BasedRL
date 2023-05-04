@@ -5,8 +5,7 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 
 from pbrl.environment import CatchEnvironment
-from pbrl.agents.transitions import Transition, TransitionBatch 
-from pbrl.utils import ProgressBar
+from pbrl.agents.transitions import Transition, TransitionBatch
 
 import numpy as np
 import torch
@@ -71,21 +70,21 @@ class PBAgent(ABC):
         # initialize training
         self._initTrain(nEpisodes, Q, W, T)
 
-        for episode in self.iterator:
+        for ep in self.iterator:
 
             # sample episode and get reward
             transitionBatch = self._sampleEpisode(env)
-            episodeR = transitionBatch.totalReward
+            epR = transitionBatch.totalReward
 
             # update policy and learning rate
-            episodeL = self._learn(transitionBatch)
+            epPG, epVL = self._learn(transitionBatch)
             # self.optimizer.step()
 
             # log to console and wandb
-            self._logEpisode(episode, episodeR, episodeL)
+            self._logEpisode(ep, epR, epPG, epVL)
             
             # check for convergence
-            self._checkConvergence(episodeR)
+            self._checkConvergence(epR)
             if self.converged:
                 break
         
@@ -155,16 +154,6 @@ class PBAgent(ABC):
             action = torch.distributions.Categorical(self.actor(state)).sample().item()
         return action
     
-    def _logFinal(self) -> None:
-        """ Handles all logging after training. """
-        if self._Q: return
-        if self.converged:
-            print('converged!')
-            self.iterator.finish()
-        print(f'avg. reward: {self._tR / self._nE:.2f}')
-        print(f'avg. loss: {self._tL / self._nE:.2f}')
-        return
-    
     def _castState(self, state: np.ndarray | torch.Tensor) -> torch.Tensor:
         """ Cast numpy array or a torch tensor to a torch tensor on the correct device.
         If the dimension of the state is 3, it is flattened.
@@ -186,48 +175,37 @@ class PBAgent(ABC):
 
     @abstractmethod
     def _initTrain(self, nEpisodes: int, Q: bool, W: bool, T: bool) -> None:
-        """ Sets up the necessary variables for the training loop.
-
-        1. Initializes some private variables
-        2. Tells wandb to track the models if W and T are true
-        3. Initializes the episode iterator
-        4. Initializes the learning rate scheduler
-
-        ### Args
-        `int` nEpisodes: number of episodes to train for
-        `bool` Q: whether to use a progress bar or not
-        `bool` W: whether to log anything with wandb
-        `bool` T: whether to track the model with wandb
-        """
+        """ Initializes some private variables for training. """
 
         if T: assert W, "Can't track model(s) without logging to wandb"
         
-        self._nE = nEpisodes         # total number of episodes
-        self._uI = self._nE // 100   # update interval
-        self._tR, self._tL = 0, 0    # total reward and loss
-        self._maR, self._maL = 0, 0  # moving averages for reward and loss
-        self._Q, self._W = Q, W      # whether to use progress bar and wandb
-        self._cC = 0                 # convergence counter
-        
-        if Q: self.iterator = range(self._nE)
-        else: self.iterator = ProgressBar(self._nE, updateInterval=self._uI, metrics=['r', 'l'])
+        self._nE = nEpisodes          # total number of episodes
+        self._uI = self._nE // 100    # update interval
+        self._tR, self._maR = 0, 0    # total reward and moving average reward
+        self._tPG, self._maPG = 0, 0  # total policy gradient and moving average policy gradient
+        self._tVL, self._maVL = 0, 0  # total value loss and moving average value loss
+        self._Q, self._W = Q, W       # whether to use progress bar and wandb
+        self._cC = 0                  # convergence counter
 
         return
     
     @abstractmethod
-    def _learn(self, tB: TransitionBatch) -> float:
+    def _learn(self, tB: TransitionBatch) -> tuple[float, float | None]:
         """ Performs a learning step on the given transition batch.
+
+        One transition batch generally represents one episode.
 
         ### Args
         `TransitionBatch` tB: variable sized batch of transitions to learn from
 
         ### Returns
-        `float` avgLoss: average loss over the batch
+        `float` avgPG: average policy gradient over the batch
+        `float | None` avgVL: average value loss over the batch
         """
         raise NotImplementedError('Must be implemented by subclass')
     
     @abstractmethod
-    def _updatePolicy(self, S: torch.Tensor, A: torch.Tensor, G: torch.Tensor) -> float:
+    def _updatePolicy(self, S: torch.Tensor, A: torch.Tensor, G: torch.Tensor) -> tuple[float, float | None]:
         """ Updates the agent's policy (and value function if applicable).
 
         ### Args
@@ -236,18 +214,34 @@ class PBAgent(ABC):
         `torch.Tensor` G: target value tensor
 
         ### Returns
-        `float` totalLoss: total loss over the batch
+        `float` totalPG: total policy gradient over the batch
+        `float | None` totalVL: total value loss over the batch
         """
         raise NotImplementedError('Must be implemented by subclass')
     
     @abstractmethod
-    def _logEpisode(self, i: int, r: float, l: float) -> None:
+    def _logEpisode(self, i: int, r: float, pg: float, vl: float | None) -> None:
         """ Handles all logging after an episode. """
         self._tR += r
-        self._tL += l
+        self._tPG += pg
+        self._tVL += vl if vl is not None else 0
         self._maR += r / self._uI
-        self._maL += l / self._uI
+        self._maPG += pg / self._uI
+        self._maVL += vl / self._uI if vl is not None else 0
         if (i+1) % self._uI == 0:
-            if not self._Q: self.iterator.updateMetrics(r=self._maR, l=self._maL)
-            self._maR, self._maL = 0, 0
+            data = {'r': self._maR, 'pg': self._maPG, 'vl': self._maVL}
+            if vl is None: data.pop('vl')
+            if not self._Q: self.iterator.updateMetrics(**data)
+            self._maR, self._maPG, self._maVL = 0, 0, 0
+        return
+
+    @abstractmethod
+    def _logFinal(self) -> None:
+        """ Handles all logging after training. """
+        if self._Q: return
+        if self.converged:
+            print('converged!')
+            self.iterator.finish()
+        print(f'avg. reward: {self._tR / self._nE:.3f}')
+        print(f'avg. policy gradient: {self._tPG / self._nE:.3f}')
         return

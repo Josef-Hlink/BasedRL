@@ -6,6 +6,7 @@ from pathlib import Path
 from pbrl.environment import CatchEnvironment
 from pbrl.agents.base import PBAgent
 from pbrl.agents.transitions import TransitionBatch
+from pbrl.utils import ProgressBar
 
 import numpy as np
 import torch
@@ -57,11 +58,31 @@ class ActorCriticAgent(PBAgent):
     ###########
 
     def _initTrain(self, nEpisodes: int, Q: bool, W: bool, T: bool) -> None:
+        """ Sets up the necessary variables for the training loop.
 
+        1. Initializes some private variables
+        2. Tells wandb to track the models if W and T are true
+        3. Initializes the episode iterator
+        4. Initializes the optimizers and learning rate schedulers
+
+        ### Args
+        `int` nEpisodes: number of episodes to train for
+        `bool` Q: whether to use a progress bar or not
+        `bool` W: whether to log anything with wandb
+        `bool` T: whether to track the model with wandb
+        """
+        
+        # 1. initialize some private variables
         super()._initTrain(nEpisodes, Q, W, T)
         
+        # 2. tell wandb to track the models if W and T are true
         if W and T: wandb.watch((self.actor, self.critic), log='all', log_freq=self._uI)
 
+        # 3. initialize the episode iterator
+        if Q: self.iterator = range(self._nE)
+        else: self.iterator = ProgressBar(self._nE, updateInterval=self._uI, metrics=['r', 'pg', 'vl'])
+        
+        # 4. initialize the optimizers and learning rate schedulers
         self.aOptimizer = torch.optim.Adam(self.actor.parameters(), lr=self.alpha)
         self.cOptimizer = torch.optim.Adam(self.critic.parameters(), lr=self.alpha)
 
@@ -84,14 +105,17 @@ class ActorCriticAgent(PBAgent):
     def _chooseAction(self, state: np.ndarray) -> int:
         return super()._chooseAction(state)
 
-    def _learn(self, tB: TransitionBatch) -> float:
+    def _learn(self, tB: TransitionBatch) -> tuple[float, float | None]:
         """ Performs a learning step using the given transition batch.
+
+        One transition batch generally represents one episode.
 
         ### Args
         `TransitionBatch` tB: variable sized batch of transitions to learn from
 
         ### Returns
-        `float` avgLoss: average loss over the batch
+        `float` avgPG: average policy gradient over the batch
+        `float` avgVL: average value loss over the batch
         """
 
         # unpack transition batch into tensors (and put on device)
@@ -103,25 +127,28 @@ class ActorCriticAgent(PBAgent):
             V_ = self.critic(S_).squeeze()
             G = R + self.gamma * V_ * (1 - D)
 
-        totalLoss = 0
+        totalPG, totalVL = 0, 0
 
         # loop over transitions with batch size
         for i in range(0, len(tB), self.batchSize):
             # slice mini-batch from the full batch
             slc: slice = slice(i, i+self.batchSize)
             _S, _A, _G = map(lambda x: x[slc], (S, A, G))
-            # update policy and value function and add loss to total loss
-            totalLoss += self._updatePolicy(_S, _A, _G)
+            # update policy and value function and get batch metrics
+            batchPG, batchVL = self._updatePolicy(_S, _A, _G)
+            # add batch metrics to total metrics
+            totalPG += batchPG
+            totalVL += batchVL
 
         # update learning rates
         self.aScheduler.step()
         self.cScheduler.step()
 
-        # return average loss
-        return totalLoss / len(tB)
+        # return average metrics
+        return totalPG / len(tB), totalVL / len(tB)
 
 
-    def _updatePolicy(self, S: torch.Tensor, A: torch.Tensor, G: torch.Tensor) -> float:
+    def _updatePolicy(self, S: torch.Tensor, A: torch.Tensor, G: torch.Tensor) -> tuple[float, float | None]:
         """ Updates the agent's policy and value function.
 
         ### Args
@@ -130,7 +157,8 @@ class ActorCriticAgent(PBAgent):
         `torch.Tensor` G: target value tensor
 
         ### Returns
-        `float` totalLoss: total loss over the batch
+        `float` totalPG: total policy gradient over the batch
+        `float` totalVL: total value loss over the batch
         """
 
         maxGradNorm = 0.5
@@ -138,14 +166,14 @@ class ActorCriticAgent(PBAgent):
         # forward pass to get action distribution
         dist = torch.distributions.Categorical(self.actor(S))
         # calculate policy loss
-        policyLoss = -dist.log_prob(A) * (G - self.critic(S).squeeze())
+        policyGradient = -dist.log_prob(A) * (G - self.critic(S).squeeze())
         # add entropy regularization
-        policyLoss -= self.beta * dist.entropy()
+        policyGradient -= self.beta * dist.entropy()
 
         # zero_grad used to prevent earlier gradients from affecting the current gradient
         self.aOptimizer.zero_grad()
         # calculate gradients for policy network
-        policyLoss.mean().backward()
+        policyGradient.mean().backward()
         # clip gradients to prevent exploding gradients
         torch.nn.utils.clip_grad_norm_(self.actor.parameters(), maxGradNorm)
         # update policy network parameters
@@ -163,23 +191,25 @@ class ActorCriticAgent(PBAgent):
         # update value function network parameters
         self.cOptimizer.step()
 
-        # return total loss over the batch
-        return (policyLoss + valueLoss).sum().item()
+        # return total policy gradient and total value loss
+        return policyGradient.sum().item(), valueLoss.sum().item()
 
-    def _logEpisode(self, i: int, r: float, l: float) -> None:
+    def _logEpisode(self, i: int, r: float, pg: float, vl: float | None) -> None:
         """ Handles all logging after an episode. """
-        super()._logEpisode(i, r, l)
+        super()._logEpisode(i, r, pg, vl)
         if not self._W: return
         lrActor = self.aOptimizer.param_groups[0]['lr']
         lrCritic = self.cOptimizer.param_groups[0]['lr']
-        data = dict(reward=r, lrActor=lrActor, lrCritic=lrCritic, loss=l)
+        data = dict(reward=r, polGrad=pg, valLoss=vl, lrActor=lrActor, lrCritic=lrCritic)
         commit: bool = i % self._uI == 0
         wandb.log(data, step=i, commit=commit)
         return
 
     def _logFinal(self) -> None:
         """ Handles all logging after training. """
-        return super()._logFinal()
+        super()._logFinal()
+        print(f'avg. value loss: {self._tVL / self._nE:.3f}')
+        return        
 
     def _castState(self, state: np.ndarray | torch.Tensor) -> torch.Tensor:
         return super()._castState(state)

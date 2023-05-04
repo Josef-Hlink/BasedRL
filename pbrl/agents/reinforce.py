@@ -6,6 +6,7 @@ from pathlib import Path
 from pbrl.environment import CatchEnvironment
 from pbrl.agents.base import PBAgent
 from pbrl.agents.transitions import TransitionBatch 
+from pbrl.utils import ProgressBar
 
 import numpy as np
 import torch
@@ -54,11 +55,31 @@ class REINFORCEAgent(PBAgent):
     ###########
     
     def _initTrain(self, nEpisodes: int, Q: bool, W: bool, T: bool) -> None:
-        
+        """ Sets up the necessary variables for the training loop.
+
+        1. Initializes some private variables
+        2. Tells wandb to track the model if W and T are true
+        3. Initializes the episode iterator
+        4. Initializes the optimizer and learning rate scheduler
+
+        ### Args
+        `int` nEpisodes: number of episodes to train for
+        `bool` Q: whether to use a progress bar or not
+        `bool` W: whether to log anything with wandb
+        `bool` T: whether to track the model with wandb
+        """
+
+        # 1. initialize some private variables
         super()._initTrain(nEpisodes, Q, W, T)
-        
+
+        # 2. tell wandb to track the model
         if W and T: wandb.watch(self.actor, log='all', log_freq=self._uI)
         
+        # 3. initialize the episode iterator
+        if Q: self.iterator = range(self._nE)
+        else: self.iterator = ProgressBar(self._nE, updateInterval=self._uI, metrics=['r', 'pg'])
+        
+        # 4. initialize the optimizer and scheduler
         self.optimizer = torch.optim.Adam(self.actor.parameters(), lr=self.alpha)
 
         self.scheduler = torch.optim.lr_scheduler.StepLR(
@@ -75,14 +96,17 @@ class REINFORCEAgent(PBAgent):
     def _chooseAction(self, state: np.ndarray) -> int:
         return super()._chooseAction(state)
 
-    def _learn(self, tB: TransitionBatch) -> float:
+    def _learn(self, tB: TransitionBatch) -> tuple[float, float | None]:
         """ Performs a learning step on the given transition batch.
 
+        One transition batch generally represents one episode.
+        
         ### Args
         `TransitionBatch` tB: variable sized batch of transitions to learn from
 
         ### Returns
-        `float` avgLoss: average loss over the batch
+        `float` avgPG: average policy gradient over the batch
+        `None` avgVL: average value loss over the batch (not applicable for REINFORCE)
         """
 
         # unpack transition batch into tensors (and put on device)
@@ -96,23 +120,24 @@ class REINFORCEAgent(PBAgent):
             for t in range(len(tB)):
                 G[t] = sum([self.gamma**t_ * r for t_, r in enumerate(R[t:])])
 
-        totalLoss = 0
+        totalPG = 0
 
         # loop over transitions with batch size
         for i in range(0, len(tB), self.batchSize):
             # slice mini-batch from the full batch
             slc: slice = slice(i, i+self.batchSize)
             _S, _A, _G = map(lambda x: x[slc], (S, A, G))
-            # update policy and add loss to total loss
-            totalLoss += self._updatePolicy(_S, _A, _G)
+            # update policy and add to total policy gradient
+            batchPG, _ = self._updatePolicy(_S, _A, _G)
+            totalPG += batchPG
 
         # update learning rate
         self.scheduler.step()
 
-        # return average loss
-        return totalLoss / len(tB)
+        # return average policy gradient (and None)
+        return totalPG / len(tB), None
 
-    def _updatePolicy(self, S: torch.Tensor, A: torch.Tensor, G: torch.Tensor) -> float:
+    def _updatePolicy(self, S: torch.Tensor, A: torch.Tensor, G: torch.Tensor) -> tuple[float, float | None]:
         """ Updates the agent's policy.
 
         ### Args
@@ -121,31 +146,32 @@ class REINFORCEAgent(PBAgent):
         `torch.Tensor` G: target value tensor
 
         ### Returns
-        `float` totalLoss: total loss over the batch
+        `float` totalPG: total policy gradient over the batch
+        `None` totalVL: total value loss over the batch (not applicable for REINFORCE)
         """
 
         # forward pass to get action distribution
         dist = torch.distributions.Categorical(self.actor(S))
-        # calculate base loss
-        loss = -dist.log_prob(A) * G
+        # calculate base policy gradient
+        policyGradient = -dist.log_prob(A) * G
         # add entropy regularization
-        loss -= self.beta * dist.entropy()
+        policyGradient -= self.beta * dist.entropy()
         # zero_grad used to prevent earlier gradients from affecting the current gradient
         self.optimizer.zero_grad()
-        # calculate gradients
-        loss.mean().backward()
+        # propagate gradients
+        policyGradient.mean().backward()
         # update parameters
         self.optimizer.step()
 
-        # return total loss over the batch
-        return loss.sum().item()
+        # return total policy gradient over the batch (and None)
+        return policyGradient.sum().item(), None
 
-    def _logEpisode(self, i: int, r: float, l: float) -> None:
+    def _logEpisode(self, i: int, r: float, pg: float, vl: float | None) -> None:
         """ Handles all logging after an episode. """
-        super()._logEpisode(i, r, l)
+        super()._logEpisode(i, r, pg, vl)
         if not self._W: return
         lr = self.optimizer.param_groups[0]['lr']
-        data = dict(reward=r, lr=lr, loss=l)
+        data = dict(reward=r, lr=lr, polGrad=pg)
         commit: bool = i % self._uI == 0
         wandb.log(data, step=i, commit=commit)
         return

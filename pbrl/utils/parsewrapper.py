@@ -176,9 +176,9 @@ class ParseWrapper:
             f'Discount factor {UC.g} must be in [0 .. 1]'
         assert 0 < self.config.agent.delta <= 1, \
             f'Decay rate {UC.d} for learning rate {UC.a} must be in (0 .. 1]'
-        assert 1 <= self.config.agent.batchSize <= 2**7, \
-            'Batch size must be in [1 .. 128]'
-        assert self.config.agent.batchSize in {2**i for i in range(8)}, \
+        assert 1 <= self.config.agent.batchSize <= 2**8, \
+            'Batch size must be in [1 .. 256]'
+        assert self.config.agent.batchSize & (self.config.agent.batchSize - 1) == 0, \
             'Batch size must be a power of 2'
         
         # --- environment --- #

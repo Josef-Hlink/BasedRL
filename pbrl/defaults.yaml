@@ -17,7 +17,8 @@ env:
   maxSteps: 250
   maxMisses: 10
 sweep:
+  name: null
   method: random
   metric: evalReward
-  totalRuns: 500
-  count: 50
+  totalRuns: 100
+  count: 1

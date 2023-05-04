@@ -25,6 +25,7 @@ agent:
 env:
   null
 sweep:
+  name: example
   method: bayes
   metric: evalReward
   totalRuns: 12

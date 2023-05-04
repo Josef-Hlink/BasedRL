@@ -9,8 +9,7 @@ from os import cpu_count
 from pbrl.agents.models import ActorModel, CriticModel
 from pbrl.agents import PBAgent, REINFORCEAgent, ActorCriticAgent
 from pbrl.environment import CatchEnvironment
-from pbrl.utils import UC, P, DotDict, generateID, bold
-
+from pbrl.utils import UC, P, DotDict, bold
 
 import torch
 import wandb
@@ -37,23 +36,15 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('command', type=str, choices=['init', 'run'], help=commandHelp)
     parser.add_argument('arg', type=str, help=argHelp)
-    parser.add_argument('-SN', dest='sweepName',
-        type=str, default=None, help='Name of the sweep'
-    )
     parser.add_argument('-c', '--count', dest='count',
-        type=int, default=50, help='Number of runs for each wandb agent'
+        type=int, default=1, help='Number of runs for each wandb agent'
     )
     args = parser.parse_args()
 
     # initializing sweep
     if args.command == 'init':
         configFileName = args.arg
-        sweepName = args.sweepName if args.sweepName is not None else generateID()
-        sweepID, totalRuns, count = initSweep(configFileName, sweepName)
-        print(UC.hd * 80)
-        print('To start multiple agents for this sweep, run the following command:')
-        print(generateScript(sweepID, totalRuns, count))
-        print(UC.hd * 80)
+        initSweep(configFileName)
     
     # running sweep
     elif args.command == 'run':
@@ -62,23 +53,29 @@ def main():
 
     return
 
-def generateScript(sweepID: str, totalRuns: int, count: int) -> str:
-    """ Generate a bash script using `xargs` that runs multiple agents in parallel.
+def generateCommand(sweepID: str, totalRuns: int, count: int) -> str:
+    """ Generate a bash command using `xargs` that runs multiple agents in parallel.
     
     Example for 10 runs per agent, total 200 runs, 16 available CPU cores (so 14 workers):
     ```bash
-    seq 1 20 | xargs -I {} -P 14 sh -c 'pbrl-sweep run <sweepID> -PN <projectName> -c 10'
+    seq 1 20 | xargs -I {} -P 14 sh -c 'pbrl-sweep run <sweepID> -c 10'
+    ```
+    Example for count = 1 (no -c parameter will be passed):
+    ```bash
+    seq 1 200 | xargs -I {} -P 14 sh -c 'pbrl-sweep run <sweepID>'
     ```
     """
     nWorkers = cpu_count() - 2
-    script = ""
-    script += f"seq 1 {totalRuns//count} | xargs -I {{}} -P {nWorkers} sh -c "
-    script += f"'pbrl-sweep run {sweepID} -c {count}'"
-    return script
+    command = ""
+    command += f"seq 1 {totalRuns//count} | xargs -I {{}} -P {nWorkers} sh -c"
+    command += f" 'pbrl-sweep run {sweepID}"
+    if count > 1: command += f" -c {count}'"
+    else: command += "'"
+    return command
 
-def initSweep(configFileName: str, sweepName: str) -> tuple[str, int, int]:
+def initSweep(configFileName: str) -> None:
     """ Initializes a sweep from a config file.
-    Returns the sweep ID, the total number of runs and the number of runs per agent.
+    Will also call `generateCommand` to generate a bash command to run the sweep.
     """
 
     # load default config from BasedRL/pbrl/defaults.yaml
@@ -89,6 +86,9 @@ def initSweep(configFileName: str, sweepName: str) -> tuple[str, int, int]:
     with open(P.sweeps / f'{configFileName}.yaml', 'r') as f:
         customConfig = DotDict(yaml.load(f, Loader=yaml.FullLoader))
 
+    # avoid having sweep name being None
+    assert customConfig.sweep['name'] is not None, f'No sweep name found in {configFileName}.yaml'
+
     # merge default and custom configs
     config = merge(defaultConfig, customConfig)
 
@@ -97,7 +97,7 @@ def initSweep(configFileName: str, sweepName: str) -> tuple[str, int, int]:
 
     # initialize sweep config
     sweepConfig = dict(
-        name = sweepName,
+        name = config.sweep.name,
         method = config.sweep.method,
         metric = dict(
             name = config.sweep.metric,
@@ -113,7 +113,13 @@ def initSweep(configFileName: str, sweepName: str) -> tuple[str, int, int]:
         project = f'pbrl-sweeps',
     )
 
-    return sweepID, config.sweep.totalRuns, config.sweep.count
+    # generate and print bash command
+    print(UC.hd * 80)
+    print('To start multiple agents for this sweep, run the following command:')
+    print(generateCommand(sweepID, config.sweep.totalRuns, config.sweep.count))
+    print(UC.hd * 80)
+
+    return
 
 def runSweep(sweepID: str, count: int) -> None:
     """ Run a sweep from a sweep ID. """
@@ -222,6 +228,10 @@ def parseConfig(config: DotDict) -> dict:
       parameters:
         x:
           values: [1, 2]
+    sweep:
+      parameters:
+        m:
+          value: hello
     ```
     """
     parsedConfig = DotDict()

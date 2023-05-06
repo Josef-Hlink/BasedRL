@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 from pbrl.environment import CatchEnvironment
 from pbrl.agents.transitions import Transition, TransitionBatch
+from pbrl.utils import ProgressBar
 
 import numpy as np
 import torch
@@ -84,7 +85,6 @@ class PBAgent(ABC):
             self._logEpisode(ep, epR, epPG, epVL)
             
             # check for convergence
-            self._checkConvergence(epR)
             if self.converged:
                 break
         
@@ -113,8 +113,14 @@ class PBAgent(ABC):
     @property
     def converged(self) -> bool:
         """ Whether the agent has converged or not. """
-        return self._cC >= 50
-    
+        # we can't check convergence in first two windows
+        # we also don't want to check every single time bc it's expensive
+        if len(self._rT) < 2*self._cI+1 or len(self._rT) % self._uI != 0:
+            return False
+        currentMedR = np.median(self._rT[-self._cI:])
+        self._rI = currentMedR - np.median(self._rT[-2*self._cI-1:-self._cI-1])
+        return currentMedR > 0 and self._rI < 1
+
     ###################
     # PUBLIC ABSTRACT #
     ###################
@@ -164,11 +170,6 @@ class PBAgent(ABC):
             state = state.flatten()
         return state
 
-    def _checkConvergence(self, reward: float) -> None:
-        """ Updates the convergence counter. """
-        if reward >= 30: self._cC += 1
-        else: self._cC = 0
-
     ####################
     # PRIVATE ABSTRACT #
     ####################
@@ -185,7 +186,10 @@ class PBAgent(ABC):
         self._tPG, self._maPG = 0, 0  # total policy gradient and moving average policy gradient
         self._tVL, self._maVL = 0, 0  # total value loss and moving average value loss
         self._Q, self._W = Q, W       # whether to use progress bar and wandb
-        self._cC = 0                  # convergence counter
+
+        self._rT = []                 # reward trace
+        self._cI = self._nE // 10     # convergence interval
+        self._dR = 0                  # difference in reward between current and previous convergence interval
 
         return
     
@@ -222,6 +226,7 @@ class PBAgent(ABC):
     @abstractmethod
     def _logEpisode(self, i: int, r: float, pg: float, vl: float | None) -> None:
         """ Handles all logging after an episode. """
+        self._rT.append(r)
         self._tR += r
         self._tPG += pg
         self._tVL += vl if vl is not None else 0
@@ -240,8 +245,9 @@ class PBAgent(ABC):
         """ Handles all logging after training. """
         if self._Q: return
         if self.converged:
-            print('converged!')
+            assert isinstance(self.iterator, ProgressBar)
             self.iterator.finish()
+            print(f'converged at episode {len(self._rT)}')
         print(f'avg. reward: {self._tR / self._nE:.3f}')
         print(f'avg. policy gradient: {self._tPG / self._nE:.3f}')
         return

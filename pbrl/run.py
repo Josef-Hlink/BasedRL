@@ -64,7 +64,7 @@ def main():
 
     # train agent
     if not Q: print(UC.hd * 80)
-    agent.train(env, config.exp.nTrainEps, Q, D, W, T)
+    nEpisodes = agent.train(env, config.exp.budget, Q, D, W, T)
 
     # evaluate agent
     evalReward = agent.evaluate(env, config.exp.nEvalEps)
@@ -75,7 +75,7 @@ def main():
     if not Q: print(UC.hd * 80)
 
     if W:
-        wandb.run.summary['converged'] = agent.converged
+        wandb.run.summary['convergedAt'] = nEpisodes if agent.converged else None
         wandb.run.summary['evalReward'] = evalReward
         wandb.finish()
     
@@ -98,7 +98,7 @@ def _initRun() -> tuple[DotDict, torch.device]:
         projectID: str
         runID: str
         agentType: str
-        nTrainEps: int
+        budget: int
         nEvalEps: int
         seed: int
     agent:

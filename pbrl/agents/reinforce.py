@@ -28,10 +28,10 @@ class REINFORCEAgent(PBAgent):
     ##########
 
     def train(self,
-        env: CatchEnvironment, nEpisodes: int,
+        env: CatchEnvironment, budget: int,
         Q: bool = False, D: bool = False, W: bool = False, T: bool = False,
-    ) -> None:
-        return super().train(env, nEpisodes, Q, D, W, T)
+    ) -> int:
+        return super().train(env, budget, Q, D, W, T)
     
     def evaluate(self, env: CatchEnvironment, nEpisodes: int, R: bool = False) -> float:
         return super().evaluate(env, nEpisodes, R)
@@ -76,8 +76,8 @@ class REINFORCEAgent(PBAgent):
         if W and T: wandb.watch(self.actor, log='all', log_freq=self._uI)
         
         # 3. initialize the episode iterator
-        if Q: self.iterator = range(self._nE)
-        else: self.iterator = ProgressBar(self._nE, updateInterval=self._uI, metrics=['r', 'pg'])
+        if Q: self.iterator = range(self._mE)
+        else: self.iterator = ProgressBar(self._mE, updateInterval=self._uI, metrics=['r', 'pg'])
         
         # 4. initialize the optimizer and scheduler
         self.optimizer = torch.optim.Adam(self.actor.parameters(), lr=self.alpha)
@@ -182,6 +182,3 @@ class REINFORCEAgent(PBAgent):
 
     def _castState(self, state: np.ndarray | torch.Tensor) -> torch.Tensor:
         return super()._castState(state)
-
-    def _checkConvergence(self, reward: float) -> None:
-        return super()._checkConvergence(reward)

@@ -26,8 +26,8 @@ class ParseWrapper:
         parser.add_argument('-at', dest='agentType',
             type=str, default=defaults.exp.agentType, choices=['RF', 'AC'], help='Type of agent'
         )
-        parser.add_argument('-te', dest='nTrainEps',
-            type=int, default=defaults.exp.nTrainEps, help='Number of episodes to train for'
+        parser.add_argument('-bu', dest='budget',
+            type=int, default=defaults.exp.nTrainEps, help='Max number of episodes to train for'
         )
         parser.add_argument('-ee', dest='nEvalEps',
             type=int, default=defaults.exp.nEvalEps, help='Number of episodes to evaluate on'
@@ -101,7 +101,7 @@ class ParseWrapper:
                 agentType = args.agentType,
                 projectID = args.projectID,
                 runID = args.runID,
-                nTrainEps = args.nTrainEps,
+                budget = args.budget,
                 nEvalEps = args.nEvalEps,
                 seed = args.seed,
             ),
@@ -160,8 +160,8 @@ class ParseWrapper:
         """ Checks the validity of all passed values for the experiment. """
 
         # --- experiment --- #
-        assert 100 <= self.config.exp.nTrainEps <= 1e5, \
-            'Number of training episodes must be in [100 .. 100,000]'
+        assert 100 <= self.config.exp.budget <= 1e5, \
+            'Max number of training episodes must be in [100 .. 10,000]'
         assert 10 <= self.config.exp.nEvalEps <= 1e3, \
             'Number of evaluation episodes must be in [10 .. 1,000]'
         assert 0 <= self.config.exp.seed < 1e8, \

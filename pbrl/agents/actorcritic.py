@@ -29,10 +29,10 @@ class ActorCriticAgent(PBAgent):
     ##########
 
     def train(self,
-        env: CatchEnvironment, nEpisodes: int,
+        env: CatchEnvironment, budget: int,
         Q: bool = False, D: bool = False, W: bool = False, T: bool = False,
-    ) -> None:
-        return super().train(env, nEpisodes, Q, D, W, T)
+    ) -> int:
+        return super().train(env, budget, Q, D, W, T)
     
     def evaluate(self, env: CatchEnvironment, nEpisodes: int, R: bool = False) -> float:
         return super().evaluate(env, nEpisodes, R)
@@ -79,8 +79,8 @@ class ActorCriticAgent(PBAgent):
         if W and T: wandb.watch((self.actor, self.critic), log='all', log_freq=self._uI)
 
         # 3. initialize the episode iterator
-        if Q: self.iterator = range(self._nE)
-        else: self.iterator = ProgressBar(self._nE, updateInterval=self._uI, metrics=['r', 'pg', 'vl'])
+        if Q: self.iterator = range(self._mE)
+        else: self.iterator = ProgressBar(self._mE, updateInterval=self._uI, metrics=['r', 'pg', 'vl'])
         
         # 4. initialize the optimizers and learning rate schedulers
         self.aOptimizer = torch.optim.Adam(self.actor.parameters(), lr=self.alpha)
@@ -208,7 +208,7 @@ class ActorCriticAgent(PBAgent):
     def _logFinal(self) -> None:
         """ Handles all logging after training. """
         super()._logFinal()
-        if not self._Q: print(f'avg. value loss: {self._tVL / self._nE:.3f}')
+        if not self._Q: print(f'avg. value loss: {self._tVL / self._mE:.3f}')
         return        
 
     def _castState(self, state: np.ndarray | torch.Tensor) -> torch.Tensor:

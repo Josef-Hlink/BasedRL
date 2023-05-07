@@ -184,13 +184,13 @@ def performSingleRun():
         )
 
         # train agent
-        agent.train(env, config.exp.nTrainEps, Q=True, D=False, W=True)
+        nEpisodes = agent.train(env, config.exp.budget, Q=True, D=False, W=True)
 
         # evaluate agent
         evalReward = agent.evaluate(env, config.exp.nEvalEps)
 
         # log results
-        wandb.run.summary['converged'] = agent.converged
+        wandb.run.summary['convergedAt'] = nEpisodes if agent.converged else None
         wandb.run.summary['evalReward'] = evalReward
  
     return

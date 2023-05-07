@@ -54,22 +54,26 @@ class PBAgent(ABC):
     #####################
 
     def train(self,
-        env: CatchEnvironment, nEpisodes: int,
+        env: CatchEnvironment, budget: int,
         Q: bool = False, D: bool = False, W: bool = False, T: bool = False,
-    ) -> None:
+    ) -> int:
         """ Trains the agent on an environment for a given number of episodes.
         
         ### Args
         `CatchEnvironment` env: environment to train on
-        `int` nEpisodes: number of episodes to train for
+        `int` budget: number of episodes to train for
         `bool` Q: toggle information printing
         `bool` D: toggle debug printing
         `bool` W: toggle wandb logging
         `bool` T: toggle wandb model tracking
+
+
+        ### Returns
+        `int` nEpisodes: number of episodes trained for
         """
 
         # initialize training
-        self._initTrain(nEpisodes, Q, W, T)
+        self._initTrain(budget, Q, W, T)
 
         for ep in self.iterator:
 
@@ -90,7 +94,7 @@ class PBAgent(ABC):
         # log final summary to console
         self._logFinal()
 
-        return
+        return ep + 1
     
     def evaluate(self, env: CatchEnvironment, nEpisodes: int, R: bool = False) -> float:
         """ Evaluates the agent on an environment on a given number of episodes.
@@ -174,20 +178,20 @@ class PBAgent(ABC):
     ####################
 
     @abstractmethod
-    def _initTrain(self, nEpisodes: int, Q: bool, W: bool, T: bool) -> None:
+    def _initTrain(self, budget: int, Q: bool, W: bool, T: bool) -> None:
         """ Initializes some private variables for training. """
 
         if T: assert W, "Can't track model(s) without logging to wandb"
         
-        self._nE = nEpisodes          # total number of episodes
-        self._uI = self._nE // 100    # update interval
+        self._mE = budget             # max number of episodes
+        self._uI = self._mE // 100    # update interval
         self._tR, self._maR = 0, 0    # total reward and moving average reward
         self._tPG, self._maPG = 0, 0  # total policy gradient and moving average policy gradient
         self._tVL, self._maVL = 0, 0  # total value loss and moving average value loss
         self._Q, self._W = Q, W       # whether to use progress bar and wandb
 
         self._rT = []                 # reward trace
-        self._cI = self._nE // 10     # convergence interval
+        self._cI = self._mE // 10     # convergence interval
         self._dR = 0                  # difference in reward between current and previous convergence interval
 
         return
@@ -247,6 +251,6 @@ class PBAgent(ABC):
             assert isinstance(self.iterator, ProgressBar)
             self.iterator.finish()
             print(f'converged at episode {len(self._rT)}')
-        print(f'avg. reward: {self._tR / self._nE:.3f}')
-        print(f'avg. policy gradient: {self._tPG / self._nE:.3f}')
+        print(f'avg. reward: {self._tR / self._mE:.3f}')
+        print(f'avg. policy gradient: {self._tPG / self._mE:.3f}')
         return

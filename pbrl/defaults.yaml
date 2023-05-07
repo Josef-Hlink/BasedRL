@@ -1,6 +1,6 @@
 exp:
   agentType: RF
-  nTrainEps: 2500
+  budget: 2500
   nEvalEps: 100
   seed: null
 agent:

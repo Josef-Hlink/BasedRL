@@ -27,7 +27,7 @@ class ParseWrapper:
             type=str, default=defaults.exp.agentType, choices=['RF', 'AC'], help='Type of agent'
         )
         parser.add_argument('-bu', dest='budget',
-            type=int, default=defaults.exp.nTrainEps, help='Max number of episodes to train for'
+            type=int, default=defaults.exp.budget, help='Max number of episodes to train for'
         )
         parser.add_argument('-ee', dest='nEvalEps',
             type=int, default=defaults.exp.nEvalEps, help='Number of episodes to evaluate on'

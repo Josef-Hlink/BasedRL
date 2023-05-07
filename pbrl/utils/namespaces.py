@@ -5,7 +5,8 @@ from sys import platform
 from pathlib import Path
 
 
-mac: bool = platform == 'darwin'
+# fancy terminal output if not on Windows
+fancy: bool = platform != 'win32'
 
 class UC:
     """ Namespace with a few UniCode characters for Greek symbols and ASCII art in stdout. """
@@ -14,14 +15,14 @@ class UC:
     b = '\u03b2'  # beta
     g = '\u03b3'  # gamma
     d = '\u03b4'  # delta
-    tl = '\u250c'  if mac else '|'  # ┌
-    bl = '\u2514'  if mac else '|'  # └
-    tr = '\u2510'  if mac else '|'  # ┐
-    br = '\u2518'  if mac else '|'  # ┘
-    hd = '\u2500'  if mac else '-'  # ─
-    vd = '\u2502'  if mac else '|'  # │
-    block = '\u25a0'  if mac else '#'  # ■
-    empty = '\u25a1'  if mac else '='  # □
+    tl = '\u250c'  if fancy else '|'  # ┌
+    bl = '\u2514'  if fancy else '|'  # └
+    tr = '\u2510'  if fancy else '|'  # ┐
+    br = '\u2518'  if fancy else '|'  # ┘
+    hd = '\u2500'  if fancy else '-'  # ─
+    vd = '\u2502'  if fancy else '|'  # │
+    block = '\u25a0'  if fancy else '#'  # ■
+    empty = '\u25a1'  if fancy else '='  # □
 
 class P:
     """ Namespace with all paths used in the project. """

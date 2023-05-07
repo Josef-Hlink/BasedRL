@@ -79,9 +79,8 @@ class PBAgent(ABC):
 
             # update policy and learning rate
             epPG, epVL = self._learn(transitionBatch)
-            # self.optimizer.step()
 
-            # log to console and wandb
+            # log to console and/or wandb
             self._logEpisode(ep, epR, epPG, epVL)
             
             # check for convergence

@@ -25,6 +25,8 @@ class ProgressBar:
         self.percentage = 0
         self.info = ''
 
+        self.lastBarLength = 80
+
         self.tic = perf_counter()
         print(f'Started training for {numSteps} episodes at {bold(datetime.now().strftime("%H:%M:%S"))}')
         return
@@ -60,7 +62,8 @@ class ProgressBar:
         self.bar = UC.block * n + UC.empty * (self.w - n) + f' {self.percentage}%'
         if self.info != '':
             self.bar += f' | {self.info}'
-        self.bar += ' ' * (80 - len(self.bar))
+        self.bar += ' ' * (self.lastBarLength - len(self.bar))
+        self.lastBarLength = len(self.bar)
         return
 
     def _render(self):

@@ -98,7 +98,7 @@ class ActorCriticAgent(PBAgent):
             gamma = self.delta
         )
 
-        self.nSteps = 3
+        self.nSteps = 10
 
         return
 
@@ -166,28 +166,15 @@ class ActorCriticAgent(PBAgent):
         `float` totalVL: total value loss over the batch
         """
         maxGradNorm = 0.5
-        # Baseline subtraction flag
-        # self.baseSub = True
 
-        # forward pass to get action distribution
+        # forward passes to get action distributions and state values
         dist = torch.distributions.Categorical(self.actor(S))
+        val = self.critic(S).squeeze()
 
         if self.baseSub:
-            # calculate the baseline as the mean of the value function estimates.
-            pred = self.critic(S).squeeze()
-            baseline = pred.mean()
+            val = val - val.mean()
 
-            # calculate advantage by using baseline subtraction.
-            advantage = G - pred + baseline
-
-            # calculate policy loss with baseline subtraction. 
-            policyGradient = -dist.log_prob(A) * advantage
-
-        else:
-            # forward pass to get action distribution
-            dist = torch.distributions.Categorical(self.actor(S))
-            # calculate policy loss
-            policyGradient = -dist.log_prob(A) * (G - self.critic(S).squeeze())
+        policyGradient = -dist.log_prob(A) * (G - val)
 
         # add entropy regularization
         policyGradient -= self.beta * dist.entropy()
@@ -202,10 +189,7 @@ class ActorCriticAgent(PBAgent):
         self.aOptimizer.step()
 
         # calculate value function loss
-        if self.baseSub:
-            valueLoss = ( self.critic(S).squeeze() - (G - baseline).detach()) ** 2
-        else:
-            valueLoss = (self.critic(S).squeeze() - G) ** 2
+        valueLoss = (self.critic(S).squeeze() - G) ** 2
 
         # zero_grad used to prevent earlier gradients from affecting the current gradient
         self.cOptimizer.zero_grad()

@@ -67,7 +67,7 @@
     The research analyzes how policy gradient variance, bootstrapping, baseline subtraction, and entropy regularization affect agents performance.
     The results reveal that the Actor-Critic agent beat REINFORCE in terms of convergence time and average performance that were found.
     But the fact remains that both agents' performance was significantly dependent on the hyper-parameters used to train them.
-    The application of entropy regularization with fine-tuned hyper-parameter values improved policy gradient approaches by encouraging action space exploration.
+    The application of entropy regularization reduced variance and improved policy gradient approaches by encouraging action space exploration.
     Meanwhile, bootstrapping with n-step: 3 had no effect on the final results, and combining bootstrapping and baseline subtraction had minimal variance reducing effect.
     Nevertheless, the study provides insights into the behaviour and strategy of the agent in this custom-world through various environment changes.  
 \end{abstract}
@@ -86,7 +86,7 @@ All code written for this project is publicly available on GitHub\footnote{\url{
 \label{I-Goals}
 The goal is to look into a number of reinforcement learning-related issues.
 Without regard to order, we would like to quickly summarize the primary study objectives.
-First, we test whether the commonly held assumption that the policy gradients employed by the REINFORCE method have significant variance is accurate. \cite{RL_book} %Werkt niet? 
+First, we test whether the commonly held assumption that the policy gradients employed by the REINFORCE method have significant variance is accurate. \cite{Sutton} %Werkt niet? 
 In the context of an actor-critic agent, our second goal is to examine the effects of bootstrapping and baseline subtraction, both separately and jointly, on the variance of policy gradients and average performance.
 Third, we contrast the two agents' performances as well as their individual features.
 Fourth, we investigate how agent performance is affected by entropy regularization.
@@ -217,6 +217,24 @@ All of our hyperparameter sweeps are publicly available in one of our wandb proj
 \subsubsection{Comparison REINFORCE \& Actor-Critic}
 \label{R/AC-Comparison}
 
+
+\subsubsection{Bootstrap \& Baseline subtraction }
+% 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/boostrap.png}
+    \caption{This figure shows the variance between an active (true) bootstrap and inactive (false) bootstrap. Not much difference is seen between the two.}
+    \label{fig:bootstrap}
+\end{figure}
+
+% policy gradient
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/baseline.png}
+    \caption{This figure shows the variance between an active (true) baseline subtraction and inactive (false) baseline subtraction. Some difference can be seen, but not much.}
+    \label{fig:baseline}
+\end{figure}
+
 % -------------------------------------------------------------------
 % -------------------------------------------------------------------
 \section{Environment variation - Actor Critic}
@@ -264,15 +282,20 @@ At an high speed of 1.5, the agent still performed decent, where the average rew
 This is impressive since there were many more targets to keep track off, on which the agent was not trained. 
 
 \begin{table}[]
-\begin{tabular}{lll}
-Speed & Avg. reward & Max possible reward \\
-0.5   & 17.24       & 18                  \\
-1.0   & 33.70       & 35                  \\
-1.5   & 35.5        & 62                 
-\end{tabular}
-\caption{This table shows the results of the Actor-Critic (pixel) agent interacting with the environment (7 x 7) testing different drop interval speeds.  Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and 100 budget. }
-\label{tab:Pixel-speed}
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Speed} & \textbf{Avg. reward} & \textbf{Max reward} \\
+        \hline
+        0.5   & 17.24       & 18                  \\
+        1.0   & 33.70       & 35                  \\
+        1.5   & 35.5        & 62          \\
+        \hline          
+    \end{tabular}
+    \caption{This table shows the results of the Actor-Critic (pixel) agent interacting with the environment (7 x 7) testing different drop interval speeds.  Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and 100 budget. }
+    \label{tab:Pixel-speed}
 \end{table}
+
 
 % ------------------------------------
 \subsubsection{Size}
@@ -283,15 +306,19 @@ The row variation was again taken into account whilst defining the max reward.
 The results from this experiment are seen in Table \ref{tab:Pixel-size}.
 
 \begin{table}[]
-\begin{tabular}{lll}
-Size (rows x columns) & Avg. reward & Max possible reward \\
-7 x 14                & -9.22       & 36                  \\
-14 x 7                & 14.14       & 17                  \\
-4 x 4                 & 60.60       & 63                 
-\end{tabular}
-\caption{This table shows the results of the Actor-Critic (pixel) agent interacting with different sizes of the environment with speed 1.0. 
-Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and 1000 budget. }
-\label{tab:Pixel-size}
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Size (rows x columns)} & \textbf{Avg. reward} & \textbf{Max reward} \\
+        \hline
+        7 x 14                & -9.22       & 36                  \\
+        14 x 7                & 14.14       & 17                  \\
+        4 x 4                 & 60.60       & 63                    \\
+        \hline
+    \end{tabular}
+    \caption{This table shows the results of the Actor-Critic (pixel) agent interacting with different sizes of the environment with speed 1.0. 
+    Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and 1000 budget. }
+    \label{tab:Pixel-size}
 \end{table}
 
 Observing the agent in the first environment (7 x 14)  where the strategy is to stick to one side, without hugging the wall, but too far too catch balls on the other side. 
@@ -313,13 +340,17 @@ The agent therefor anticipated the next ball to fall somewhere in that region, w
 Again due to the long wait of 14 rows, and few balls, the agent started shaking, missing some of the balls. 
 
 \begin{table}[]
-\begin{tabular}{lll}
-Size (rows x columns) & Avg. reward & Max possible reward \\
-7 x 14                & 7.56        & 9                  
-\end{tabular}
-\caption{This table shows the results of the Actor-Critic (pixel) agent interacting with a combination of changes in the environment. 
-Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and 1000 budget. }
-\label{tab:Pixel-comb}
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Size (rows x columns)} & \textbf{Avg. reward} & \textbf{Max reward} \\
+        \hline
+        7 x 14                & 7.56        & 9    \\
+        \hline              
+    \end{tabular}
+    \caption{This table shows the results of the Actor-Critic (pixel) agent interacting with a combination of changes in the environment. 
+    Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and 1000 budget. }
+    \label{tab:Pixel-comb}
 \end{table}
 
 
@@ -352,14 +383,18 @@ At a speed of 1.0, on which the agent was trained, it does not hug the wall anym
 This explains the behaviour of the agents on slower speed, where more time is available between balls, causing them to slowly move to one wall. 
 
 \begin{table}[]
-\begin{tabular}{lll}
-Speed & Avg. reward & Max possible reward \\
-0.5   & 17.14       & 18                  \\
-0.75   & 27.08       & 28                  \\
-1.0   & 33.74        & 35                 
-\end{tabular}
-\caption{This table shows the results of the Actor-Critic (vector) agent interacting with the environment (7 x 7) testing different drop interval speeds. Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and budget of 1000. }
-\label{tab:Vector-speed}
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Speed} & \textbf{Avg. reward} & \textbf{Max reward} \\
+        \hline
+        0.5   & 17.14       & 18                  \\
+        0.75   & 27.08       & 28                  \\
+        1.0   & 33.74        & 35                 \\
+        \hline
+    \end{tabular}
+    \caption{This table shows the results of the Actor-Critic (vector) agent interacting with the environment (7 x 7) testing different drop interval speeds. Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and budget of 1000. }
+    \label{tab:Vector-speed}
 \end{table}
 
 % ------------------------------------
@@ -370,15 +405,19 @@ Alike to the pixel calculation, the row changes were taken into account for the 
 The results from this experiment are seen in Table \ref{tab:Vector-size}.
 
 \begin{table}[]
-\begin{tabular}{lll}
-Size (rows x columns) & Avg. reward & Max possible reward \\
-7 x 14                & 7.98       & 36                  \\
-14 x 7                & 16.28       & 17                  \\
-4 x 4                 & 59.34       & 63                 
-\end{tabular}
-\caption{This table shows the results of the Actor-Critic (vector) agent interacting with different sizes of the environment with speed 1.0. 
-Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and 1000 budget. }
-\label{tab:Vector-size}
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Size (rows x columns)} & \textbf{Avg. reward} & \textbf{Max reward} \\
+        \hline
+        7 x 14                & 7.98       & 36                  \\
+        14 x 7                & 16.28       & 17                  \\
+        4 x 4                 & 59.34       & 63             \\
+        \hline
+    \end{tabular}
+    \caption{This table shows the results of the Actor-Critic (vector) agent interacting with different sizes of the environment with speed 1.0. 
+    Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and 1000 budget. }
+    \label{tab:Vector-size}
 \end{table}
 
 On the first environment (7 x 14) the agent performs relatively well for the size of the world.
@@ -397,13 +436,17 @@ The agent maintains its position in the middle as much as possible, and over tim
 Sadly, sometimes shakes were observed when the agent was positioned under the ball.  
 
 \begin{table}[]
-\begin{tabular}{lll}
-Size (rows x columns) & Avg. reward & Max possible reward \\
-7 x 14                & 8.7         & 9                  
-\end{tabular}
-\caption{This table shows the results of the Actor-Critic (vector) agent interacting with a combination of changes in the environment. 
-Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and 1000 budget. }
-\label{tab:Vector-comb}
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Size (rows x columns)} & \textbf{Avg. reward} & \textbf{Max reward} \\
+        \hline
+        7 x 14                & 8.7         & 9    \\ 
+        \hline              
+    \end{tabular}
+    \caption{This table shows the results of the Actor-Critic (vector) agent interacting with a combination of changes in the environment. 
+    Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 0.995, batch size: 32 and 1000 budget. }
+    \label{tab:Vector-comb}
 \end{table}
 
 
@@ -426,14 +469,15 @@ The performance of both agents highly depended on the set of hyper-parameters us
 
 One parameter, entropy regularization, can help to improve the performance of policy gradient methods by encouraging exploration of the action space, by penalizing policies that have low entropy (that are too certain about their actions).
 The regularization hyper-parameter ($\beta$) showed to be of great importance to fine-tune. 
-A high entropy regularization did not perform well overall, there were some outlier hyper-parameter sets, but these could also be lucky runs.  
+An ($\beta$) of zero did not perform well at all, the variance was high between episodes when compared to values between 0.1 and 0.3. 
+Only when the entropy regularization was set to 0.1, the agent started to perform better, but decreasing at higher values.
 
 Alongside all the parameters, the Actor-Critic also had the option to use bootstrapping and/or baseline subtraction. 
 We decided not to experiment with different n-steps with bootstrapping, since we already had many different configurations.
 After testing we found out that a bootstrap agent with n-step 3 seems to be to low to have an significant effect on the final results. 
 The baseline subtraction, although the impact was low, the variance was smaller. 
-When combining both, we saw no direct difference to the behaviour of just the baseline subtraction. 
-%Something about the target values? 
+This might be due to the implementation of a baseline subtraction less suitable for this environment. 
+When combining both, we saw no direct difference in comparison to only baseline subtraction. 
 
 The REINFORCE agent, unlike the Actor-Critic, has no second network to regulate the first one. 
 Here we indeed see that the policy gradients suffer from high variance, unless entropy regularization is applied, counteracting the variance allowing for faster and stable convergence. 
@@ -453,22 +497,38 @@ This could be due to the fact that the entropy regularization was still letting 
 During the research, there were some ideas that we did not have the time to test and document properly.
 We would like to explore different speeds and environments, to see how the agents react to these changes.
 Does the agent need to train longer, or do we need to create a smaller environment to make it work?
+
 Furthermore, the shaking behaviour seemed to stop at certain speeds, which is interesting to research further.
 The shaking behaviour might also be due to the fact that the agent is not trained for long enough, and that it will disappear after more training.
 We would also like to test the Actor-Critic agent with different n-steps, to see if this has a significant impact on the performance of the agent.
 During some late testing we noticed the effect of n-step (10) bootstrapping, but we did not have the time to test and document this properly.
+
+We would also like to explore different baseline subtractions, since many implementations exist.
+We have seen that the baseline subtraction did not have a significant impact on the performance of the agent, but we would like to see if this is due to the implementation or the environment.
+
+
+A last point for the future could be to further pinpoint the correct entropy regulation hyper-parameter.
+We have seen that the entropy regularization is of great importanc, and would like to find out  if we can find a better value than 0.1.
+Any value between 0 and 0.1 could theoretically perform better than values above 0.1, since we have seen that the performance decreases on higher values.
 
 
 % -------------------------------------------------------------------
 \subsection{Contributions}
 \label{C-Contributes}
 
-%Let me know what you have in mind about this :) 
-Overview of contributions:
--Code Reinforce / Actor-Critic (Josef + Koen)
--Code Utils / wandb (Josef)
--Paper (Koen + Josef)
-
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Contribution} & \textbf{Josef} & \textbf{Koen} \\
+        \hline
+    Code REINFORCE and Actor-Critic agent & V              & V             \\
+    Paper                                 & V              & V             \\
+    Code utils and wandb setup            & V              & X            
+    \end{tabular}
+    \caption{This table shows the contribution dispersion of the project. Where each member has contributed fairly to the project.  }
+    \label{tab:Contribution}
+    \end{table}
 
 \bibliography{main}
 \bibliographystyle{icml2021}

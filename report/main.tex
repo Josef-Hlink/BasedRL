@@ -68,7 +68,7 @@
     The results reveal that the Actor-Critic agent beat REINFORCE in terms of convergence time and average performance that were found.
     But the fact remains that both agents' performance was significantly dependent on the hyper-parameters used to train them.
     The application of entropy regularization reduced variance and improved policy gradient approaches by encouraging action space exploration.
-    Meanwhile, bootstrapping with n-step: 3 had no effect on the final results, and combining bootstrapping and baseline subtraction had minimal variance reducing effect.
+    Meanwhile, bootstrapping with n-step: 3 had no effect on the final results, and combining bootstrapping and baseline subtraction had no noticeable effect.
     Nevertheless, the study provides insights into the behaviour and strategy of the agent in this custom-world through various environment changes.  
 \end{abstract}
 
@@ -85,7 +85,7 @@ All code written for this project is publicly available on GitHub\footnote{\url{
 \subsection{Goals}
 \label{I-Goals}
 
-The goal is to look into a number of reinforcement learning-related issues.
+The goal is to explore a number of reinforcement learning-related issues.
 Without regard to order, we would like to quickly summarize the primary study objectives.
 First, we test whether the commonly held assumption that the policy gradients employed by the REINFORCE method have significant variance is accurate \cite{Sutton}.
 In the context of an actor-critic agent, our second goal is to examine the effects of bootstrapping and baseline subtraction, both separately and jointly, on the variance of policy gradients and average performance.
@@ -234,6 +234,18 @@ All of our hyperparameter sweeps are publicly available in one of our wandb proj
 \subsubsection{Results}
 \label{AC-Results}
 
+We compared the performances of the various agents after the bootstrapping and baseline subtraction features were implemented.
+The impact of bootstrapping on Actor-Critic performance is depicted in Figures \ref{fig:bootstrap-v} and \ref{fig:bootstrap-r}.
+Figure \ref{fig:bootstrap-v} illustrates the variance of the various rewards received, where no discernible difference can be found.
+The average reward obtained is seen in Figure \ref{fig:bootstrap-r}, where the bootstrapped agent does not always perform better.
+However, it does not necessarily perform worse in the long run. It appears to be more unstable than the non-bootstrapped agent.
+
+Figures \ref{fig:baselinesub-v} and \ref{fig:baselinesub-r} show the effect of baseline subtraction on Actor-Critic performance.
+Figure \ref{fig:baselinesub-v} shows the variance of the different rewards gained, where some difference can be seen.
+The variance of the baseline subtracted agent is not lower than the variance of the non-baseline subtracted agent.
+It seems to even create some more variance into the system.
+Figure \ref{fig:baselinesub-r} also points this out, where the rewards are more stable, but not necessarily higher.
+
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\linewidth]{figs/bootstrap-V.png}
@@ -287,7 +299,6 @@ For example, due to the difference of state space's between the trained model an
 % -------------------------------------------------------------------
 \subsection{Pixel}
 \label{ENV-PV}
-
 
 % ------------------------------------
 \subsubsection{Speed}
@@ -485,7 +496,7 @@ Sadly, sometimes shakes were observed when the agent was positioned under the ba
 This study has conducted a comprehensive comparison of the performance of two policy-based reinforcement learning algorithms, namely REINFORCE and Actor-Critic.
 We investigated the impact of various hyper-parameters, the effect of bootstrapping, baseline subtraction, and entropy regularization, on the performance of both agents. 
 In addition, we compared the performance of the pixel agent and the vector agent on different environments and speeds. 
-From this research we have come with the following key takeaways.
+From this research we have concluded the following key takeaways.
 
 % -------------------------------------------------------------------
 \subsection{Key takeaways} %observations
@@ -502,7 +513,7 @@ Only when the entropy regularization was set to 0.1, the agent started to perfor
 Alongside all the parameters, the Actor-Critic also had the option to use bootstrapping and/or baseline subtraction. 
 We decided not to experiment with different n-steps with bootstrapping, since we already had many different configurations.
 After testing we found out that a bootstrap agent with n-step 3 seems to be to low to have an significant effect on the final results. 
-The baseline subtraction, although the impact was low, the variance was smaller. 
+The baseline subtraction, seemed to increase variance in rewards, where not using baseline subtraction concentrated the rewards upwards. 
 This might be due to the implementation of a baseline subtraction less suitable for this environment. 
 When combining both, we saw no direct difference in comparison to only baseline subtraction. 
 
@@ -514,10 +525,11 @@ To start of, the flexibility of the vector network, without suffering too much f
 It was able to traverse with relative ease and high rewards, through different environment size settings and ball drop intervals, when compared to the pixel agent.
 Speed changes were no problem for both, until it caused multiple balls to be in the playing field. 
 Both agents were not trained to handle this, but the vector agent did adapt better to the situation than the pixel agent could. 
-Wide environments made it hard for the REINFORCE agent to even converge before 1000 episodes, causing it to do quite badly in comparison to the vector agent.
-The "shake" behaviour of the vector agent was also observed in the pixel agent. 
-This could be due to the fact that the entropy regularization was still letting the agent explore the action space.  
-
+Wider environments made it hard for the REINFORCE agent to even converge before 1000 episodes, causing it to do quite badly in comparison to the vector agent.
+The "shake" behaviour of the vector agent was also observed in the pixel agent, but on a much smaller scale.
+This could be due to the fact that the entropy regularization was still letting the vector based agent explore the action space.  
+The pixel agent did prefer to hug the side of the environment, which was not observed as much in the vector agent.
+Also, when performing in more extreme environments the agent started to hug the side of the environment. 
 
 % -------------------------------------------------------------------
 \subsection{Future Work}
@@ -535,7 +547,7 @@ We have seen that the baseline subtraction did not have a significant impact on 
 
 
 A last point for the future could be to further pinpoint the correct entropy regulation hyper-parameter.
-We have seen that the entropy regularization is of great importanc, and would like to find out  if we can find a better value than 0.1.
+We have seen that the entropy regularization is of great importance, and would like to find out  if we can find a better value than 0.1.
 Any value between 0 and 0.1 could theoretically perform better than values above 0.1, since we have seen that the performance decreases on higher values.
 
 
@@ -551,7 +563,8 @@ Any value between 0 and 0.1 could theoretically perform better than values above
         \hline
     Code REINFORCE and Actor-Critic agent & V              & V             \\
     Paper                                 & V              & V             \\
-    Code utils and wandb setup            & V              & X            
+    Code utils and wandb setup            & V              & X       \\
+    \hline     
     \end{tabular}
     \caption{This table shows the contribution dispersion of the project. Where each member has contributed fairly to the project.  }
     \label{tab:Contribution}

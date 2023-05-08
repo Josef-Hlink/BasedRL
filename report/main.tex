@@ -133,30 +133,11 @@ We  examine the generality of our agents and gauge their capacity for environmen
 \section{Agents}
 \label{Agents}
 
-To convey ideas found in both the REINFORCE and Actor-Critic agents, we will first introduce the Policy-based (basic) agent.
-The implementation, hyperparameter tuning, and results of the REINFORCE agent will then be covered in detail.
-Following that, we will go into detail on the Actor-Critic agent, including its methods, hyperparameter optimization, outcomes, and comparison to the REINFORCE agent.
-
-% ------------------------------------
-\subsection{Policy based}
-\label{A-PolicyBased}
-
 Both the REINFORCE and Actor-Critic agents are policy-based agents, i.e. they directly optimize the policy function.
 This policy function is a mapping from states to actions, and can be represented by a neural network.
 The technique to optimize this policy function is called policy gradient \textit{ascent}, as it happens to be a maximization problem.
 This is in contrast with the more common policy gradient \textit{descent} approach seen in most neural network applications, where the loss is defined as the gradient of the policy function, and the policy function is updated in the direction of the gradient's negative.
 The policy gradient ascent approach is used because the policy function is a probability distribution, and thus its gradient can not be viewed as a loss function.
-
-% ------------------------------------
-\subsubsection{Methodology}
-\label{PB-Method}
-
-
-
-% ------------------------------------
-\subsubsection{Hyperparameter optimization}
-\label{PB-Method}
-
 
 % -------------------------------------------------------------------
 \subsection{REINFORCE}

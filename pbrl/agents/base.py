@@ -31,14 +31,13 @@ class PBAgent(ABC):
             `float` gamma: discount factor
             `float` delta: learning rate decay rate
             `int` batchSize: number of transitions to use for a single update
-            `bool` bootstrap: toggle bootstrapping
-            `bool` baselineSubtraction: toggle baseline subtraction
+            `bool` bootstrap: toggle bootstrapping (not used by REINFORCEAgent)
+            `bool` baselineSubtraction: toggle baseline subtraction (not used by REINFORCEAgent)
 
         Torch:
             `torch.device` device: device to run on
             `torch.nn.Module` actor: the model to be used for the agent's behavior policy
-            `torch.nn.Module` critic: the model to be used for the agent's value function
-                (not used by REINFORCEAgent)
+            `torch.nn.Module` critic: the model to be used for the agent's value function (not used by REINFORCEAgent)
         """
         self.device = device
         # set for both REINFORCEAgent and ActorCriticAgent

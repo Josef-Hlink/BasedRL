@@ -11,3 +11,13 @@ wandb
 pbrl.egg-info
 dist
 build
+
+# report
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.log
+*.out
+*.bbl
+*.blg

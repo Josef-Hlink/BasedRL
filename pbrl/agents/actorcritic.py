@@ -9,7 +9,6 @@ from pbrl.agents.transitions import TransitionBatch
 from pbrl.utils import ProgressBar
 
 import numpy as np
-import torch.nn.functional as F
 import torch
 import wandb
 
@@ -113,11 +112,11 @@ class ActorCriticAgent(PBAgent):
         One transition batch generally represents one episode.
 
         ### Args
-        - tB : `TransitionBatch`, variable sized batch of transitions to learn from
+        - `TransitionBatch` tB: variable sized batch of transitions to learn from
 
         ### Returns
-        - tuple of `float` avgPG: average policy gradient over the batch
-                and `float` avgVL: average value loss over the batch
+        - `float` avgPG: average policy gradient over the batch
+          `float` avgVL: average value loss over the batch
         """
         # Define n_steps (number of steps to look ahead for n-step return) #TODO: should be self.n_steps for testing. 
         n_steps = 3

@@ -99,6 +99,7 @@ class ActorCriticAgent(PBAgent):
         )
 
         self.nSteps = 10
+        self.gammaVec = torch.tensor([self.gamma ** i for i in range(self.nSteps + 1)]).to(self.device)
 
         return
 
@@ -122,14 +123,10 @@ class ActorCriticAgent(PBAgent):
         """
 
         # unpack transition batch into tensors (and put on device)
-        S, A, R, S_, D = map(lambda x: x.to(self.device), (tB.S, tB.A, tB.R, tB.S_, tB.D))
-        
-        if self.bootstrap:
-            G = self._getBootstrapTargets(S, A, R, S_, D)
-        if self.bootstrap == False:
-            with torch.no_grad():
-                V_ = self.critic(S_).squeeze()
-                G = R + self.gamma * V_ * (1 - D)
+        S, A = map(lambda x: x.to(self.device), (tB.S, tB.A))
+
+        # get target values
+        G = self._getBootstrapTargets(tB) if self.bootstrap else self._getVanillaTargets(tB)
 
         totalPG, totalVL = 0, 0
 
@@ -151,7 +148,6 @@ class ActorCriticAgent(PBAgent):
 
         # return average metrics
         return totalPG / len(tB), totalVL / len(tB)
-
 
     def _updatePolicy(self, S: torch.Tensor, A: torch.Tensor, G: torch.Tensor) -> tuple[float, float | None]:
         """ Updates the agent's policy and value function.
@@ -203,35 +199,34 @@ class ActorCriticAgent(PBAgent):
         # return total policy gradient and total value loss
         return policyGradient.sum().item(), valueLoss.sum().item()
 
-    def _getBootstrapTargets(self, S: torch.Tensor, A: torch.Tensor, R: torch.Tensor, S_: torch.Tensor, D: torch.Tensor) -> torch.Tensor:
-        """ Calculates the target values for the n-step bootstrap algorithm.
+    def _getVanillaTargets(self, tB: TransitionBatch) -> torch.Tensor:
+        """ Calculates the vanilla target values. """
+        R, S_, D = map(lambda x: x.to(self.device), (tB.R, tB.S_, tB.D))
+        with torch.no_grad(): V_ = self.critic(S_).squeeze()
+        G = R + self.gamma * V_ * (1 - D)
+        return G
 
-        ### Args
-        `torch.Tensor` S: state tensor
-        `torch.Tensor` A: action tensor
-        `torch.Tensor` R: reward tensor
-        `torch.Tensor` S_: next state tensor
-        `torch.Tensor` D: done tensor
-
-        ### Returns
-        `torch.Tensor` G: target value tensor
-        """
-        # calculate target values using critic network
-        with torch.no_grad():
-            # estimate next state value using critic network
-            V_ = self.critic(S_).squeeze()
+    def _getBootstrapTargets(self, tB: TransitionBatch) -> torch.Tensor:
+        """ Calculates the target values for the n-step bootstrap algorithm. """
+        
+        R, S_, D = map(lambda x: x.to(self.device), (tB.R, tB.S_, tB.D))
+        with torch.no_grad(): V_ = self.critic(S_).squeeze()
 
         # calculate n-step return
-        G = torch.zeros(len(S), device=self.device)
-        for i in range(len(S)):
+        G = torch.zeros(len(tB), device=self.device)
+        for i in range(len(tB)):
             # slice out the next n_steps transitions
-            n_slc: slice = slice(i, i + self.nSteps)
-            R_n, D_n, V_n = R[n_slc], D[n_slc], V_[n_slc]
-
-            G[i] = sum([self.gamma ** k * R_n[k] for k in range(len(R_n))]) + \
-                (self.gamma ** self.nSteps) * V_n[-1] * (1 - D_n[-1])
+            slc: slice = slice(i, i + self.nSteps)
+            # substitute value of last state with bootstrap value
+            _R = torch.cat((R[slc], V_[slc][-1] * (1-D[slc][-1]).unsqueeze(0)))
+            # sum of discounted rewards
+            G[i] = sum(self._discount(_R))
 
         return G
+    
+    def _discount(self, R: torch.Tensor) -> torch.Tensor:
+        """ Discounts the Rewards. """
+        return self.gammaVec[:R.shape[0]] * R
 
     def _logEpisode(self, i: int, r: float, pg: float, vl: float | None) -> None:
         """ Handles all logging after an episode. """

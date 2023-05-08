@@ -152,22 +152,29 @@ The policy gradient ascent approach is used because the policy function is a pro
 
 The high-level procedure of REINFORCE is laid out in Algorithm \ref{alg:reinforce}.
 
-% \begin{algorithm}[htbp]
-%     \caption{REINFORCE}
-%     \label{alg:reinforce}
-%     \begin{algorithmic}
-%         \State {\bfseries Input:} $env, \pi_{\theta}, \alpha, \gamma$
-%         \State Initialize policy parameters $\theta$
-%         \Repeat
-%             \State Generate an episode using policy $\pi_{\theta}: S_0, A_0, R_1, ..., S_{T-1}, A_{T-1}, R_T$
-%             \For{$t=0$ to $T-1$}
-%                 \State $G_t \gets \sum\limits_{i=t+1}^T \gamma^{i-t-1} R_i$
-%                 \State $\theta \gets \theta + \alpha \gamma^t G_t \nabla_{\theta} \log \pi_{\theta}(A_t|S_t) $
-%             \EndFor
-%         \Until{convergence}
-%     \end{algorithmic}
-% \end{algorithm}
+\begin{algorithm}[htbp]
+    \caption{REINFORCE}
+    \label{alg:reinforce}
+    \begin{algorithmic}
+        \STATE {\bfseries Input:} $env, \pi_{\theta}, \alpha, \gamma$
+        \STATE Initialize policy parameters $\theta$
+        \REPEAT
+            \STATE Under policy $\pi_{\theta}$, 
+            \STATE sample episode $S_0, A_0, R_1, ..., S_{T-1}, A_{T-1}, R_T$
+            \FOR{$t=0$ to $T-1$}
+                \STATE $G_t \gets \sum\limits_{i=t+1}^T \gamma^{i-t-1} R_i$
+                \STATE $\theta \gets \theta + \alpha \gamma^t G_t \nabla_{\theta} \log \pi_{\theta}(A_t|S_t)$
+                % baseline regularization
+                \STATE $\theta \gets \theta - \beta \gamma^t (G_t - b(S_t)) \nabla_{\theta} \log \pi_{\theta}(A_t|S_t)$
+            \ENDFOR
+        \UNTIL{convergence}
+        \STATE {\bfseries Output:} $\pi_{\theta}$
+    \end{algorithmic}
+\end{algorithm}
 
+One important thing to note is that we do not actually iterate of over each transition $(S_t, A_t, R_{t+1}, S_{t+1})$ separately.
+Rather, we use batch training, where we sample a batch of episodes, and then perform the gradient update on the batch.
+While taking larger batch sizes is computationally more efficient, it also results in a higher variance in the gradient estimates, which is something to be taken into account when setting other hyperparameters.
 
 % ------------------------------------
 \subsubsection{Hyperparameter optimization}
@@ -178,15 +185,15 @@ Our sweep was set up to randomly explore different combinations of the following
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{|c|c|}
+    \begin{tabular}{|c|c|c|}
         \hline
-        \textbf{Hyperparameter} & \textbf{Values} \\
+        \textbf{Hyperparameter} & \textbf{Symbol} & \textbf{Search space} \\
         \hline
-        $\alpha$ & Uniform(0.0001, 0.005) \\
-        $\beta$ & Uniform(0.0, 0.5) \\
-        $\gamma$ & Uniform(0.7, 0.999) \\
-        $\delta$ & Uniform(0.99, 0.9999) \\
-        batch size & [$2^i \; \forall \; i \in [2, ..., 8]$] \\
+        learning rate & $\alpha$ & Uniform($10^{-4}, 5 \cdot 10^{-3}$) \\
+        entropy reg. coef. & $\beta$ & Uniform(0.0, 0.5) \\
+        discount factor & $\gamma$ & Uniform(0.7, 0.999) \\
+        $\alpha$ decay rate & $\delta$ & Uniform(0.99, 0.9999) \\
+        batch size & - & [$2^i \; \forall \; i \in [2, ..., 8]$] \\
         \hline
     \end{tabular}
     \caption{REINFORCE hyperparameters}
@@ -199,6 +206,24 @@ All of our hyperparameter sweeps are publicly available in one of our wandb proj
 % ------------------------------------
 \subsubsection{Results}
 \label{R-Results}
+
+The result of our sweep over REINFORCE's hyperparameter space is shown in Figure \ref{fig:sweep}.
+This was not the first sweep we performed, as we iteratively tried to minimize the weight each individual hyperparameter had on the rewards the agent was able to achieve on the evaluation episodes.
+Stating that one hyperparameter is inherently more important than another is a difficult task, as the hyperparameters are not independent of each other, so multiple sweeps had to be done to find a good balance.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/sweep.png}
+    \caption{REINFORCE hyperparameter sweep results for our REINFORCE agent using wandb.}
+    \label{fig:sweep}
+\end{figure}
+
+For the learning rate $\alpha$, we see that generally, values between 5e-4 and 5e-3 result in the most consistent performance.
+We also see that employing higher batch sizes also tends to be more, not less beneficial when compared to their lower counterparts, which should in theory be more granular in their gradient estimates, as the network of the agent is updated more frequently.
+Perhaps the most interesting observation we can make from this figure is the relatively homogeneous section of the plot depicting regularization coefficient $\beta$ with values between 0.05 and 0.25.
+
+To further investigate the effect of this hyperparameter in isolation, we also ran the same agent for 10 independent iterations with a fixed learning rate of 0.0025, a discount factor of 0.8, a batch size of 64, and a learning rate decay factor of 0.99.
+The rewards over the episodes and the policy gradients runs are shown in Figures \ref{fig:er-r} and \ref{fig:er-pg}, respectively.
 
 % reward
 \begin{figure}[htbp]
@@ -216,6 +241,13 @@ All of our hyperparameter sweeps are publicly available in one of our wandb proj
     \label{fig:er-pg}
 \end{figure}
 
+The first observation to make is that completely leaving out entropy regularization exhibits an unpleasantly high variance in the rewards the agent is able to achieve; some runs converge extremely early, while others never manage to perform above chance level.
+The way these curves are plotted is also important to note: the shaded area represents the standard error of the mean, which is a measure of the uncertainty of the mean estimate.
+When a single run is converged, the data is not stops appearing in the plot, which is why the mean drops down to the worse performing runs that never converge.
+All other agents do not exhibit this behaviour, and manage to achieve stable learning across all 10 runs.
+
+Again, we see that the optimum for this hyperparameter lies somewhere around 0.1, as it converges the fastest and achieves the highest mean reward while training.
+The policy gradient also supports this observation, as these curves resemble the reward curves.
 
 % -------------------------------------------------------------------
 \subsection{Actor-Critic}
@@ -225,6 +257,9 @@ All of our hyperparameter sweeps are publicly available in one of our wandb proj
 % ------------------------------------
 \subsubsection{Methodology}
 \label{AC-Method}
+
+
+
 
 % ------------------------------------
 \subsubsection{Hyper parameter optimization}

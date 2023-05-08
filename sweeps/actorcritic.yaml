@@ -1,6 +1,6 @@
 exp:
   agentType: AC
-  budget: 5000
+  budget: 2500
   nEvalEps: 500
   seed: 12345678
 agent:
@@ -22,10 +22,15 @@ agent:
     max: 0.9999
   batchSize:
     [4, 8, 16, 32, 64, 128, 256]
+  bootstrap:
+    [true, false]
+  baselineSubtraction:
+    [true, false]
 env:
   null
 sweep:
-  name: AC2-random
-  method: random
+  name: fin-AC
+  method: bayes
   metric: evalReward
   totalRuns: 200
+  count: 20

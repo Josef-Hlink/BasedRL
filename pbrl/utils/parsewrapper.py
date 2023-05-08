@@ -170,6 +170,8 @@ class ParseWrapper:
         # --- experiment --- #
         assert 100 <= self.config.exp.budget <= 1e5, \
             'Max number of training episodes must be in [100 .. 10,000]'
+        assert self.config.exp.budget % 100 == 0, \
+            'Max number of training episodes must be a multiple of 100'
         assert 10 <= self.config.exp.nEvalEps <= 1e3, \
             'Number of evaluation episodes must be in [10 .. 1,000]'
         assert 0 <= self.config.exp.seed < 1e8, \

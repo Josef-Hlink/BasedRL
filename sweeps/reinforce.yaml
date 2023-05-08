@@ -1,6 +1,6 @@
 exp:
   agentType: RF
-  budget: 5000
+  budget: 2500
   nEvalEps: 500
   seed: 12345678
 agent:
@@ -25,7 +25,8 @@ agent:
 env:
   null
 sweep:
-  name: RF2-random
-  method: random
+  name: fin-RF
+  method: bayes
   metric: evalReward
   totalRuns: 200
+  count: 20

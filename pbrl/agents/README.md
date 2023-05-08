@@ -10,6 +10,3 @@ All agents share the same API, and have identical function signatures for their 
 Below is a diagram of the agent class, where all of the methods are listed with the methods they themselves call.
 
 ![Alt text](../../assets/agent.png)
-
-Some other closely related classes are defined in this directory, such as `Transition` and `TransitionBatch` in _transitions.py_ which are used to store the data collected during training.
-The models used by the agents are defined in _models.py_.

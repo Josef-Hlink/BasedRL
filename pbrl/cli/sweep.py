@@ -6,7 +6,7 @@ import yaml
 from typing import Type
 from os import cpu_count
 
-from pbrl.agents.models import ActorModel, CriticModel
+from pbrl.models import ActorModel, CriticModel
 from pbrl.agents import PBAgent, REINFORCEAgent, ActorCriticAgent
 from pbrl.environment import CatchEnvironment
 from pbrl.utils import UC, P, DotDict, bold

@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = 'pbrl',
-    version = '0.1.0',
+    version = '1.0.0',
     description = 'Policy-based Reinforcement Learning',
     author = 'Josef Hamelink',
     license = 'MIT',
@@ -20,12 +20,13 @@ setup(
         'jupyter',
         'gym',
         'wandb',
+        'torch',
     ],
     entry_points = {
         'console_scripts': [
-            'pbrl-run = pbrl.run:main',
-            'pbrl-render = pbrl.render:main',
-            'pbrl-sweep = pbrl.sweep:main',
+            'pbrl-run = pbrl.cli.run:main',
+            'pbrl-render = pbrl.cli.render:main',
+            'pbrl-sweep = pbrl.cli.sweep:main',
         ],
     },
 )

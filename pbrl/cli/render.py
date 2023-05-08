@@ -7,7 +7,7 @@ from typing import Type
 
 from pbrl.utils import P, DotDict
 from pbrl.environment import CatchEnvironment
-from pbrl.agents.models import ActorModel, CriticModel
+from pbrl.models import ActorModel, CriticModel
 from pbrl.agents import PBAgent, REINFORCEAgent, ActorCriticAgent
 
 import torch

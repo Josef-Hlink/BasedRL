@@ -6,7 +6,7 @@ import yaml
 from typing import Type
 
 from pbrl.agents import PBAgent, REINFORCEAgent, ActorCriticAgent
-from pbrl.agents.models import ActorModel, CriticModel
+from pbrl.models import ActorModel, CriticModel
 from pbrl.environment import CatchEnvironment
 from pbrl.utils import ParseWrapper, P, UC, DotDict, bold
 

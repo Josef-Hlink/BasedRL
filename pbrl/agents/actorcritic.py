@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pbrl.environment import CatchEnvironment
 from pbrl.agents.base import PBAgent
-from pbrl.agents.transitions import TransitionBatch
+from pbrl.transitions import TransitionBatch
 from pbrl.utils import ProgressBar
 
 import numpy as np

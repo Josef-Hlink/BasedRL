@@ -15,9 +15,6 @@ Contributors:
    - `source venv/bin/activate`
 3. build project
    - `pip install -e .`
-4. install `torch` separately
-   - `pip install torch` for normal version
-   - `pip install torch --index-url https://download.pytorch.org/whl/cu118` if your machine has CUDA 11.8 or higher
 
 ## Usage
 

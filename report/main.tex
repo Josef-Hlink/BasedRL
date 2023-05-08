@@ -242,9 +242,9 @@ The rewards over the episodes and the policy gradients runs are shown in Figures
 \end{figure}
 
 The first observation to make is that completely leaving out entropy regularization exhibits an unpleasantly high variance in the rewards the agent is able to achieve; some runs converge extremely early, while others never manage to perform above chance level.
-The way these curves are plotted is also important to note: the shaded area represents the standard error of the mean, which is a measure of the uncertainty of the mean estimate.
+The way these curves are plotted is also important to note: the shaded area represents the standard error of the mean as min and max values were too noisy.
 When a single run is converged, the data is not stops appearing in the plot, which is why the mean drops down to the worse performing runs that never converge.
-All other agents do not exhibit this behaviour, and manage to achieve stable learning across all 10 runs.
+Our agents with $\beta > 0$ do not exhibit this behaviour, and manage to achieve stable learning across all 10 runs.
 
 Again, we see that the optimum for this hyperparameter lies somewhere around 0.1, as it converges the fastest and achieves the highest mean reward while training.
 The policy gradient also supports this observation, as these curves resemble the reward curves.
@@ -258,9 +258,45 @@ The policy gradient also supports this observation, as these curves resemble the
 \subsubsection{Methodology}
 \label{AC-Method}
 
+An actor-critic agent is very similar to a REINFORCE agent, in the sense that they both actively approximate an optimal policy through interaction with the environment using a policy gradient method.
+The main difference between the two is that the actor-critic agent uses an additional function approximator, called the critic, to estimate the value of the current state.
+The actor is used to select actions, and the critic is used to evaluate the actor's performance during training.
+A high-level overview of the actor-critic's training loop is described in Algorithm \ref{alg:ac}.
+
+\begin{algorithm}[htbp]
+    \caption{Actor-Critic}
+    \label{alg:ac}
+    \begin{algorithmic}
+        \STATE {\bfseries Input:} $env, \pi_{\theta}, V_{\phi}, \alpha_{\pi}, \alpha_{V}, \gamma$
+        \STATE Initialize policy parameters $\theta$ and value function parameters $\phi$
+        \REPEAT
+            \STATE Under policy $\pi_{\theta}$, 
+            \STATE sample episode $S_0, A_0, R_1, ..., S_{T-1}, A_{T-1}, R_T$
+            \FOR{$t=0$ to $T-1$}
+                \STATE $G_t \gets \sum\limits_{i=t+1}^T \gamma^{i-t-1} R_i$
+                \STATE $\delta_t \gets G_t - V_{\phi}(S_t)$
+                \STATE $\phi \gets \phi + \alpha_{V} \gamma^t \delta_t \nabla_{\phi} V_{\phi}(S_t)$
+                \STATE $\theta \gets \theta + \alpha_{\pi} \gamma^t \delta_t \nabla_{\theta} \log \pi_{\theta}(A_t|S_t)$
+            \ENDFOR
+        \UNTIL{convergence}
+        \STATE {\bfseries Output:} $\pi_{\theta}$
+    \end{algorithmic}
+\end{algorithm}
+
+
+In order to assist the performance of the agent during training, we implemented two features; bootstrapping and baseline subtraction.
+Bootstrapping is a technique that allows the agent to learn from incomplete episodes, by using the critic's value function to estimate the value of the state at the end of the episode.
+A strategy for reducing the variation of the projected value of an action or state is baseline subtraction. 
+This is done by subtracting the average value of the state from the projected value of the state.
+
+
 % ------------------------------------
-\subsubsection{Hyper parameter optimization}
+\subsubsection{Hyperparameter optimization}
 \label{AC-HPO}
+
+For our actor-critic agent, we used the same hyperparameters as our REINFORCE agent.
+While we would have wanted to experiment with using different learning rates for the actor and critic, we were unable to do so due to time constraints.
+For simplicity's sake, we performed nearly identical hyperparameter sweeps as we did for the REINFORCE agent, but with the addition of turning on and off the bootstrapping and baseline subtraction features.
 
 % ------------------------------------
 \subsubsection{Results}
@@ -306,6 +342,7 @@ Figure \ref{fig:baselinesub-r} also points this out, where the rewards are more 
     \label{fig:baselinesub-r}
 \end{figure}
 
+\newpage
 % -------------------------------------------------------------------
 % -------------------------------------------------------------------
 \section{Environment variation - Actor Critic}
@@ -351,7 +388,7 @@ Hugging either side sometimes causes the agent to overshoot the position of the 
 At an high speed of 1.5, the agent still performed decent, where the average reward was ~ 57\% of the max possible reward. 
 This is impressive since there were many more targets to keep track off, on which the agent was not trained. 
 
-\begin{table}[]
+\begin{table}[htbp]
     \centering
     \begin{tabular}{|c|c|c|}
         \hline
@@ -375,7 +412,7 @@ The agent was tested with three different environment sizes (rows x columns); 7 
 The row variation was again taken into account whilst defining the max reward. 
 The results from this experiment are seen in Table \ref{tab:Pixel-size}.
 
-\begin{table}[]
+\begin{table}[htbp]
     \centering
     \begin{tabular}{|c|c|c|}
         \hline
@@ -409,7 +446,7 @@ The strategy of the agent was to remain in the middle, but upon enough balls fal
 The agent therefor anticipated the next ball to fall somewhere in that region, which worked out most of the time.
 Again due to the long wait of 14 rows, and few balls, the agent started shaking, missing some of the balls. 
 
-\begin{table}[]
+\begin{table}[htbp]
     \centering
     \begin{tabular}{|c|c|c|}
         \hline
@@ -452,7 +489,7 @@ The agents are again expecting the next ball to fall in the same region, causing
 At a speed of 1.0, on which the agent was trained, it does not hug the wall anymore and keeps itself more centered.
 This explains the behaviour of the agents on slower speed, where more time is available between balls, causing them to slowly move to one wall. 
 
-\begin{table}[]
+\begin{table}[htbp]
     \centering
     \begin{tabular}{|c|c|c|}
         \hline
@@ -474,7 +511,7 @@ Here no new agent had to be trained, a speed of 1.0 was used to render the envir
 Alike to the pixel calculation, the row changes were taken into account for the max reward. 
 The results from this experiment are seen in Table \ref{tab:Vector-size}.
 
-\begin{table}[]
+\begin{table}[htbp]
     \centering
     \begin{tabular}{|c|c|c|}
         \hline
@@ -505,7 +542,7 @@ The results can be found in Table \ref{tab:Vector-comb}.
 The agent maintains its position in the middle as much as possible, and over time in the episode creates a small bias for one side.
 Sadly, sometimes shakes were observed when the agent was positioned under the ball.  
 
-\begin{table}[]
+\begin{table}[htbp]
     \centering
     \begin{tabular}{|c|c|c|}
         \hline
@@ -539,12 +576,12 @@ The performance of both agents highly depended on the set of hyper-parameters us
 
 One parameter, entropy regularization, can help to improve the performance of policy gradient methods by encouraging exploration of the action space, by penalizing policies that have low entropy (that are too certain about their actions).
 The regularization hyper-parameter ($\beta$) showed to be of great importance to fine-tune. 
-An ($\beta$) of zero did not perform well at all, the variance was high between episodes when compared to values between 0.1 and 0.3. 
+Leaving out this regularization altogether did not perform well at all; the variance was high between episodes when compared to values between 0.1 and 0.3. 
 Only when the entropy regularization was set to 0.1, the agent started to perform better, but decreasing at higher values.
 
 Alongside all the parameters, the Actor-Critic also had the option to use bootstrapping and/or baseline subtraction. 
 We decided not to experiment with different n-steps with bootstrapping, since we already had many different configurations.
-After testing we found out that a bootstrap agent with n-step 3 seems to be to low to have an significant effect on the final results. 
+After testing we found out that a bootstrap agent with n-step 3 seems to be too low to have a significant effect on the final results. 
 The baseline subtraction, seemed to increase variance in rewards, where not using baseline subtraction concentrated the rewards upwards. 
 This might be due to the implementation of a baseline subtraction less suitable for this environment. 
 When combining both, we saw no direct difference in comparison to only baseline subtraction. 
@@ -558,7 +595,7 @@ It was able to traverse with relative ease and high rewards, through different e
 Speed changes were no problem for both, until it caused multiple balls to be in the playing field. 
 Both agents were not trained to handle this, but the vector agent did adapt better to the situation than the pixel agent could. 
 Wider environments made it hard for the REINFORCE agent to even converge before 1000 episodes, causing it to do quite badly in comparison to the vector agent.
-The "shake" behaviour of the vector agent was also observed in the pixel agent, but on a much smaller scale.
+The ``shake'' behaviour of the vector agent was also observed in the pixel agent, but on a much smaller scale.
 This could be due to the fact that the entropy regularization was still letting the vector based agent explore the action space.  
 The pixel agent did prefer to hug the side of the environment, which was not observed as much in the vector agent.
 Also, when performing in more extreme environments the agent started to hug the side of the environment. 
@@ -595,7 +632,7 @@ Any value between 0 and 0.1 could theoretically perform better than values above
         \hline
     Code REINFORCE and Actor-Critic agent & V              & V             \\
     Paper                                 & V              & V             \\
-    Code utils and wandb setup            & V              & X       \\
+    CLI scripts \& wandb integration      & V              & X       \\
     \hline     
     \end{tabular}
     \caption{This table shows the contribution dispersion of the project. Where each member has contributed fairly to the project.  }

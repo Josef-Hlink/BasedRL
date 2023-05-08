@@ -18,9 +18,10 @@ class REINFORCEAgent(PBAgent):
 
     def __init__(self,
         alpha: float, beta: float, gamma: float, delta: float, batchSize: int,
+        bootstrap: bool, baselineSubtraction: bool,
         device: torch.device, actor: torch.nn.Module, critic: torch.nn.Module = None,
     ) -> None:
-        super().__init__(alpha, beta, gamma, delta, batchSize, device, actor, critic)
+        super().__init__(alpha, beta, gamma, delta, batchSize, bootstrap, baselineSubtraction, device, actor, critic)
         return
 
     ##########

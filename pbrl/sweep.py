@@ -177,6 +177,8 @@ def performSingleRun():
             gamma = config.agent.gamma,
             delta = config.agent.delta,
             batchSize = config.agent.batchSize,
+            bootstrap = config.agent.bootstrap,
+            baselineSubtraction = config.agent.baselineSubtraction,
             # torch
             device = torch.device('cpu'),
             actor = actor,

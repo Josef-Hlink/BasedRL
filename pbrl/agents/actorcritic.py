@@ -18,10 +18,11 @@ class ActorCriticAgent(PBAgent):
 
     def __init__(self,
         alpha: float, beta: float, gamma: float, delta: float, batchSize: int,
+        bootstrap: bool, baselineSubtraction: bool,
         device: torch.device, actor: torch.nn.Module, critic: torch.nn.Module = None,
     ) -> None:
         assert critic is not None, 'Critic cannot be None for ActorCriticAgent'
-        super().__init__(alpha, beta, gamma, delta, batchSize, device, actor, critic)
+        super().__init__(alpha, beta, gamma, delta, batchSize, bootstrap, baselineSubtraction, device, actor, critic)
         return
 
     ##########
@@ -97,6 +98,9 @@ class ActorCriticAgent(PBAgent):
             gamma = self.delta
         )
 
+        self.nSteps = 10
+        self.gammaVec = torch.tensor([self.gamma ** i for i in range(self.nSteps + 1)]).to(self.device)
+
         return
 
     def _sampleEpisode(self, env: CatchEnvironment, R: bool = False) -> TransitionBatch:
@@ -106,36 +110,34 @@ class ActorCriticAgent(PBAgent):
         return super()._chooseAction(state)
 
     def _learn(self, tB: TransitionBatch) -> tuple[float, float | None]:
-        """ Performs a learning step using the given transition batch.
+        """Performs a learning step using the given transition batch.
 
         One transition batch generally represents one episode.
 
         ### Args
-        `TransitionBatch` tB: variable sized batch of transitions to learn from
+        - `TransitionBatch` tB: variable sized batch of transitions to learn from
 
         ### Returns
-        `float` avgPG: average policy gradient over the batch
-        `float` avgVL: average value loss over the batch
+        - `float` avgPG: average policy gradient over the batch
+          `float` avgVL: average value loss over the batch
         """
 
         # unpack transition batch into tensors (and put on device)
-        S, A, R, S_, D = map(lambda x: x.to(self.device), (tB.S, tB.A, tB.R, tB.S_, tB.D))
+        S, A = map(lambda x: x.to(self.device), (tB.S, tB.A))
 
-        # we can't use gradients here
-        with torch.no_grad():
-            # calculate target values using critic network
-            V_ = self.critic(S_).squeeze()
-            G = R + self.gamma * V_ * (1 - D)
+        # get target values
+        G = self._getBootstrapTargets(tB) if self.bootstrap else self._getVanillaTargets(tB)
 
         totalPG, totalVL = 0, 0
 
         # loop over transitions with batch size
         for i in range(0, len(tB), self.batchSize):
             # slice mini-batch from the full batch
-            slc: slice = slice(i, i+self.batchSize)
+            slc: slice = slice(i, i + self.batchSize)
             _S, _A, _G = map(lambda x: x[slc], (S, A, G))
             # update policy and value function and get batch metrics
             batchPG, batchVL = self._updatePolicy(_S, _A, _G)
+            
             # add batch metrics to total metrics
             totalPG += batchPG
             totalVL += batchVL
@@ -146,7 +148,6 @@ class ActorCriticAgent(PBAgent):
 
         # return average metrics
         return totalPG / len(tB), totalVL / len(tB)
-
 
     def _updatePolicy(self, S: torch.Tensor, A: torch.Tensor, G: torch.Tensor) -> tuple[float, float | None]:
         """ Updates the agent's policy and value function.
@@ -160,13 +161,17 @@ class ActorCriticAgent(PBAgent):
         `float` totalPG: total policy gradient over the batch
         `float` totalVL: total value loss over the batch
         """
-
         maxGradNorm = 0.5
 
-        # forward pass to get action distribution
+        # forward passes to get action distributions and state values
         dist = torch.distributions.Categorical(self.actor(S))
-        # calculate policy loss
-        policyGradient = -dist.log_prob(A) * (G - self.critic(S).squeeze())
+        val = self.critic(S).squeeze()
+
+        if self.baseSub:
+            val = val - val.mean()
+
+        policyGradient = -dist.log_prob(A) * (G - val)
+
         # add entropy regularization
         policyGradient -= self.beta * dist.entropy()
 
@@ -180,7 +185,7 @@ class ActorCriticAgent(PBAgent):
         self.aOptimizer.step()
 
         # calculate value function loss
-        valueLoss = (self.critic(S).squeeze() - G.detach())**2
+        valueLoss = (self.critic(S).squeeze() - G) ** 2
 
         # zero_grad used to prevent earlier gradients from affecting the current gradient
         self.cOptimizer.zero_grad()
@@ -193,6 +198,35 @@ class ActorCriticAgent(PBAgent):
 
         # return total policy gradient and total value loss
         return policyGradient.sum().item(), valueLoss.sum().item()
+
+    def _getVanillaTargets(self, tB: TransitionBatch) -> torch.Tensor:
+        """ Calculates the vanilla target values. """
+        R, S_, D = map(lambda x: x.to(self.device), (tB.R, tB.S_, tB.D))
+        with torch.no_grad(): V_ = self.critic(S_).squeeze()
+        G = R + self.gamma * V_ * (1 - D)
+        return G
+
+    def _getBootstrapTargets(self, tB: TransitionBatch) -> torch.Tensor:
+        """ Calculates the target values for the n-step bootstrap algorithm. """
+        
+        R, S_, D = map(lambda x: x.to(self.device), (tB.R, tB.S_, tB.D))
+        with torch.no_grad(): V_ = self.critic(S_).squeeze()
+
+        # calculate n-step return
+        G = torch.zeros(len(tB), device=self.device)
+        for i in range(len(tB)):
+            # slice out the next n_steps transitions
+            slc: slice = slice(i, i + self.nSteps)
+            # substitute value of last state with bootstrap value
+            _R = torch.cat((R[slc], V_[slc][-1] * (1-D[slc][-1]).unsqueeze(0)))
+            # sum of discounted rewards
+            G[i] = sum(self._discount(_R))
+
+        return G
+    
+    def _discount(self, R: torch.Tensor) -> torch.Tensor:
+        """ Discounts the Rewards. """
+        return self.gammaVec[:R.shape[0]] * R
 
     def _logEpisode(self, i: int, r: float, pg: float, vl: float | None) -> None:
         """ Handles all logging after an episode. """

@@ -9,6 +9,8 @@ agent:
   gamma: 0.9
   delta: 0.995
   batchSize: 8
+  bootstrap: false
+  baselineSubtraction: false
 env:
   obsType: pixel
   nRows: 7

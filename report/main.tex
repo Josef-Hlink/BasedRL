@@ -84,9 +84,10 @@ All code written for this project is publicly available on GitHub\footnote{\url{
 % -------------------------------------------------------------------
 \subsection{Goals}
 \label{I-Goals}
+
 The goal is to look into a number of reinforcement learning-related issues.
 Without regard to order, we would like to quickly summarize the primary study objectives.
-First, we test whether the commonly held assumption that the policy gradients employed by the REINFORCE method have significant variance is accurate. \cite{Sutton} %Werkt niet? 
+First, we test whether the commonly held assumption that the policy gradients employed by the REINFORCE method have significant variance is accurate \cite{Sutton}.
 In the context of an actor-critic agent, our second goal is to examine the effects of bootstrapping and baseline subtraction, both separately and jointly, on the variance of policy gradients and average performance.
 Third, we contrast the two agents' performances as well as their individual features.
 Fourth, we investigate how agent performance is affected by entropy regularization.
@@ -147,6 +148,26 @@ The policy gradient ascent approach is used because the policy function is a pro
 % ------------------------------------
 \subsubsection{Methodology}
 \label{R-Method}
+
+
+The high-level procedure of REINFORCE is laid out in Algorithm \ref{alg:reinforce}.
+
+% \begin{algorithm}[htbp]
+%     \caption{REINFORCE}
+%     \label{alg:reinforce}
+%     \begin{algorithmic}
+%         \State {\bfseries Input:} $env, \pi_{\theta}, \alpha, \gamma$
+%         \State Initialize policy parameters $\theta$
+%         \Repeat
+%             \State Generate an episode using policy $\pi_{\theta}: S_0, A_0, R_1, ..., S_{T-1}, A_{T-1}, R_T$
+%             \For{$t=0$ to $T-1$}
+%                 \State $G_t \gets \sum\limits_{i=t+1}^T \gamma^{i-t-1} R_i$
+%                 \State $\theta \gets \theta + \alpha \gamma^t G_t \nabla_{\theta} \log \pi_{\theta}(A_t|S_t) $
+%             \EndFor
+%         \Until{convergence}
+%     \end{algorithmic}
+% \end{algorithm}
+
 
 % ------------------------------------
 \subsubsection{Hyperparameter optimization}
@@ -213,26 +234,32 @@ All of our hyperparameter sweeps are publicly available in one of our wandb proj
 \subsubsection{Results}
 \label{AC-Results}
 
-% ------------------------------------
-\subsubsection{Comparison REINFORCE \& Actor-Critic}
-\label{R/AC-Comparison}
-
-
-\subsubsection{Bootstrap \& Baseline subtraction }
-% 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\linewidth]{figs/boostrap.png}
-    \caption{This figure shows the variance between an active (true) bootstrap and inactive (false) bootstrap. Not much difference is seen between the two.}
-    \label{fig:bootstrap}
+    \includegraphics[width=\linewidth]{figs/bootstrap-V.png}
+    \caption{Effect of bootstrapping on Actor-Critic performance.}
+    \label{fig:bootstrap-v}
 \end{figure}
 
-% policy gradient
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\linewidth]{figs/baseline.png}
-    \caption{This figure shows the variance between an active (true) baseline subtraction and inactive (false) baseline subtraction. Some difference can be seen, but not much.}
-    \label{fig:baseline}
+    \includegraphics[width=\linewidth]{figs/baseline-V.png}
+    \caption{Effect of baseline subtraction on Actor-Critic performance.}
+    \label{fig:baselinesub-v}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/bootstrap-R.png}
+    \caption{Effect of bootstrapping on Actor-Critic performance.}
+    \label{fig:bootstrap-r}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figs/baseline-R.png}
+    \caption{Effect of baseline subtraction on Actor-Critic performance.}
+    \label{fig:baselinesub-r}
 \end{figure}
 
 % -------------------------------------------------------------------

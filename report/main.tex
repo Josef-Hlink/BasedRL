@@ -226,6 +226,14 @@ All of our hyperparameter sweeps are publicly available in one of our wandb proj
 \subsubsection{Methodology}
 \label{AC-Method}
 
+An actor critic agent is composed of two neural networks, an actor and a critic.
+Where the actor is the policy function, and the critic is the value function.
+The actor is used to select actions, and the critic is used to evaluate the actor's performance.
+In order to assist the performance of the agent during training, we implemented two features; bootstrapping and baseline subtraction.
+Bootstrapping is a technique that allows the agent to learn from incomplete episodes, by using the critic's value function to estimate the value of the state at the end of the episode.
+A strategy for reducing the variation of the projected value of an action or state is baseline subtraction. 
+This is done by subtracting the average value of the state from the projected value of the state.
+
 % ------------------------------------
 \subsubsection{Hyper parameter optimization}
 \label{AC-HPO}

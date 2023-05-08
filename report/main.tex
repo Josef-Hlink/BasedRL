@@ -152,6 +152,29 @@ The policy gradient ascent approach is used because the policy function is a pro
 \subsubsection{Hyperparameter optimization}
 \label{R-HPO}
 
+All hyperparameter optimization was done using wandb's sweep functionality.
+Our sweep was set up to randomly explore different combinations of the following hyperparameters:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        \textbf{Hyperparameter} & \textbf{Values} \\
+        \hline
+        $\alpha$ & Uniform(0.0001, 0.005) \\
+        $\beta$ & Uniform(0.0, 0.5) \\
+        $\gamma$ & Uniform(0.7, 0.999) \\
+        $\delta$ & Uniform(0.99, 0.9999) \\
+        batch size & [$2^i \; \forall \; i \in [2, ..., 8]$] \\
+        \hline
+    \end{tabular}
+    \caption{REINFORCE hyperparameters}
+    \label{tab:my_label}
+\end{table}
+
+A total of 200 runs were performed, each with a budget of 2500 episodes, after which performance was evaluated on 500 episodes.
+All of our hyperparameter sweeps are publicly available in one of our wandb projects \footnote{\url{https://wandb.ai/basedrl/pbrl-sweeps-old}}.
+
 % ------------------------------------
 \subsubsection{Results}
 \label{R-Results}

@@ -293,18 +293,18 @@ Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 
 Observing the agent in the first environment (7 x 14)  where the strategy is to stick to one side, without hugging the wall, but too far too catch balls on the other side. 
 This was to be expected when the agent did not converge after 1000 episodes of training. 
 On an environment where the agent had less horizontal space and more vertical space (14 x 7) we notice that the agent instantly goes into the right direction.
-The problem is that the agent does not seem to have learned how to properly use the idle function, causing it to shake around the position of the ball, sometimes missing it. 
+The problem is that the agent does not seem to have learned how to properly use the idle function, causing it to "shake" left and right of the ball, sometimes missing it. 
 On the smallest environment (4 x 4) the agent performed really well, catching over ~ 96\% of the balls.
-Because the area was small, the agent locked into the target and had no time to shake to another position.
+Because the area was small, the agent rushed to the target and had no time to "shake" to another position.
 
 
 % ------------------------------------
 \subsubsection{Combination}
-After inspecting the effect of environmental changes on the agent separately, we now combine them together. 
+After inspecting the effect of environmental changes on the agent separately, we combine them together. 
 Since the model for the narrow environment (14 x 7) was already trained, it was applied here as well. 
 Table \ref{tab:Pixel-comb} displays the result.
 
-It's strategy was to remain in the middle, but upon enough balls falling on one side, a bias was generated. 
+The strategy of the agent was to remain in the middle, but upon enough balls falling on one side, a small bias was generated. 
 The agent therefor anticipated the next ball to fall somewhere in that region, which worked out most of the time.
 Again due to the long wait of 14 rows, and few balls, the agent started shaking, missing some of the balls. 
 
@@ -322,25 +322,30 @@ Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 
 % -------------------------------------------------------------------
 \subsection{Vector}
 \label{ENV-vars}
-The second agent type we tested was the vector interpretation of states.
-Due to the unique property the vector has, only one model has to be trained and can be applied to multiple environment changes.
-This is possible because the xy position of only the lowest ball is visible to the agent. 
-If we would increase the speed above 1, then multiple balls would be in the field, but only the lowest one is spotted.
-This would make it impossible for the agent to learn a strategy to catch two consecutive balls in different locations. 
+The vector agent was the second type we examined.
+Because of the vector's unique characteristic, only one model needs to be trained and can be applied to various environment modifications.
+This is feasible because the agent can see only the xy position of the lowest ball. 
+It is therefor not affected by the amount of rows, or the speed of the balls.
+One issue with this approach is that the agent can not see the balls that are above the lowest ball.
+If the speed variable is larger than one, numerous balls will appear in the field, but only the lowest is taken into consideration.
+This would make learning a strategy, for catching two successive balls in different spots, extremely difficult for the agent. 
+Depending on the speed and the rows, the second ball can already be halfway the playing field, unnoticeable for the agent. 
+
 
 % ------------------------------------
 \subsubsection{Speed}
-Similar to the pixel agent the first variation applied to the environment is a change of speed.
-Again the change in the speed together with the amount of rows determine the drop interval speed. 
+The initial modification applied to the environment, similar to the pixel agent, is a change in speed.
+Again, the drop interval speed is determined by the change in speed as well as the number of rows. 
 In Table \ref{tab:Vector-speed} we compared the results of three different speeds; 0.5, 0.75 \& 1.0. 
 
 Each different drop rate affected the agent differently. 
-Overall the agents again tend to hug the wall, but at 0.5 speed we noticed that the agent would this time idle and move towards the ball when spotted.
-The agent sometimes reacted to slow due to an opposite movement, or overshot the target. 
+Overall the agents acted similar and tended to hug the wall, but at 0.5 speed we noticed that the agent would this time idle and move towards the ball when spotted.
+The agent sometimes reacted to slow due to an opposite movement, or even overshot the target. 
 When the speed is increased to 0.75 the agent tends to hug the wall shortly before moving to catch the balls.
 After catching it moves towards the preferred wall, until a new target shows up.
-At a speed of 1.0, on which the agent was trained, the agent does not hug the wall anymore and keeps itself more centered.
-This explains the behaviour of the agents on slower speed, where more time is available between balls, causing them to be attracted slowly to one wall. 
+The agents are again expecting the next ball to fall in the same region, causing them to miss some balls.
+At a speed of 1.0, on which the agent was trained, it does not hug the wall anymore and keeps itself more centered.
+This explains the behaviour of the agents on slower speed, where more time is available between balls, causing them to slowly move to one wall. 
 
 \begin{table}[]
 \begin{tabular}{lll}
@@ -356,8 +361,8 @@ Speed & Avg. reward & Max possible reward \\
 % ------------------------------------
 \subsubsection{Size}
 To compare the results, the vector agent is also tested on the three different sizes (rows x columns); 7 x 14, 14 x 7 and 4 x 4. 
-Here again no new agent has to be trained, and a speed of 1.0 was used to render the environment. 
-Just as the pixel calculation, the row changes were taken into account for the max reward. 
+Here no new agent had to be trained, a speed of 1.0 was used to render the environment. 
+Alike to the pixel calculation, the row changes were taken into account for the max reward. 
 The results from this experiment are seen in Table \ref{tab:Vector-size}.
 
 \begin{table}[]
@@ -373,17 +378,19 @@ Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 
 \end{table}
 
 On the first environment (7 x 14) the agent performs relatively well for the size of the world.
-It managed to obtain a positive average reward of ~8 over 100 episodes. 
-It is constantly busy targeting the next dropping ball, but sometimes the distance to travel is to great.
-On an environment where the agent had less horizontal space and more vertical space (14 x 7) we notice that the agent instantly goes into the right direction and hoverd around it.
-The problem is that the agent again shakes around the position of the ball, sometimes missing it. 
+The environment is pretty wide, and not tall enough to reach the ball in time. 
+Despite this, tje ahem managed to obtain a positive average reward of ~8 over 100 episodes. 
+It is constantly moving towards the next dropping ball, but sometimes the distance is to great to traverse in time. 
+In an environment where the agent had less horizontal space and more vertical space (14 x 7) we notice that the agent instantly goes into the right direction and hovered around it.
+The problem is that the agent again "shakes" around the position of the ball, sometimes missing it. 
 On the smallest environment (4 x 4) the agent performed really well, where hugging a side is no problem if the agent instantly moves when a ball is spotted.
 
 % ------------------------------------
 \subsubsection{Combination}
 To finish the vector experiment, we also tested the combination of environment and speed changes.
 The results can be found in Table \ref{tab:Vector-comb}. 
-The agent maintains its position in the middle as much as possible, and over time in the episode creates a small bias for one side. Also shakes slightly under the position of the ball, making it almost perfect. 
+The agent maintains its position in the middle as much as possible, and over time in the episode creates a small bias for one side.
+Sadly, sometimes shakes were observed when the agent was positioned under the ball.  
 
 \begin{table}[]
 \begin{tabular}{lll}
@@ -400,54 +407,63 @@ Agent was trained with: $\alpha$: 0.001, $\beta$: 0.1, $\gamma$: 0.9, $\delta$: 
 % -------------------------------------------------------------------
 \section{Conclusion}
 \label{Conclusion}
-%summary of tasks done. 
 
-
+This study has conducted a comprehensive comparison of the performance of two policy-based reinforcement learning algorithms, namely REINFORCE and Actor-Critic.
+We investigated the impact of various hyper-parameters, the effect of bootstrapping, baseline subtraction, and entropy regularization, on the performance of both agents. 
+In addition, we compared the performance of the pixel agent and the vector agent on different environments and speeds. 
+From this research we have come with the following key takeaways.
 
 % -------------------------------------------------------------------
 \subsection{Key takeaways} %observations
 \label{C-Takeaways}
 After comparing the performance of both agents, it was notice-able that the Actor-Critic agent performed better. 
 Where the Actor-Critic converged earlier, with higher average rewards.
-The performance of both agents highly depended on the set of hyper-parameters used to train the agent, not just one set of hyper-parameters was correct. 
+The performance of both agents highly depended on the set of hyper-parameters used to train the agent, meaning that multiple sets of hyper-parameters were correct. 
 
-Entropy regularization can help to improve the performance of policy gradient methods by encouraging exploration of the action space, by penalizing policies that have low entropy (i.e., that are too certain about their actions).
-The regularization hyper-parameter ($\beta$) thus showed to be of great importance to fine-tune. 
-A high entropy regularization did not perform well overall, there were some outlier hyper-parameter sets, but these could also be lucky. 
+One parameter, entropy regularization, can help to improve the performance of policy gradient methods by encouraging exploration of the action space, by penalizing policies that have low entropy (that are too certain about their actions).
+The regularization hyper-parameter ($\beta$) showed to be of great importance to fine-tune. 
+A high entropy regularization did not perform well overall, there were some outlier hyper-parameter sets, but these could also be lucky runs.  
 
-Alongside all the existing hyper-parameters, the Actor-Critic also had the option to use bootstrapping and/or baseline subtraction. 
-We decided not to experiment with different n-steps with bootstrapping, since we already had many different configurations. 
-A bootstrap with n-step: 3 seems to be to low for the chance of having a significant effect on the final results. 
-The baseline subtraction, although the impact was low, it was noticeable that the variance was smaller. 
+Alongside all the parameters, the Actor-Critic also had the option to use bootstrapping and/or baseline subtraction. 
+We decided not to experiment with different n-steps with bootstrapping, since we already had many different configurations.
+After testing we found out that a bootstrap agent with n-step 3 seems to be to low to have an significant effect on the final results. 
+The baseline subtraction, although the impact was low, the variance was smaller. 
 When combining both, we saw no direct difference to the behaviour of just the baseline subtraction. 
 %Something about the target values? 
 
 The REINFORCE agent, unlike the Actor-Critic, has no second network to regulate the first one. 
-Here we indeed see that the policy gradients suffer from high variance, unless entropy regularization is applied, helping with said variance. 
+Here we indeed see that the policy gradients suffer from high variance, unless entropy regularization is applied, counteracting the variance allowing for faster and stable convergence. 
 
-The final comparison was that of the two Actor-Critic (pixel \& vector) on different environments and speeds.
-To start of, the flexibility of the vector network, without suffering too much information loss, worked great for this problem. 
-It was able to traverse with relative ease through different environment size settings and ball drop intervals, when compared to the pixel agent.
-Speed changes were no problem for both, until multiple balls are in the playing field, on which both agents were not trained to handle. 
-The vector agent did handle it better than the pixel agent was. 
-Wide environments made it hard for the REINFORCE agent to even converge before 1000 episodes, causing it to do quite badly in comparison to the vector agent. 
+The final comparison was that of the two Actor-Critic agents (pixel \& vector) on different environments and speeds.
+To start of, the flexibility of the vector network, without suffering too much from information loss, worked great for this specific problem. 
+It was able to traverse with relative ease and high rewards, through different environment size settings and ball drop intervals, when compared to the pixel agent.
+Speed changes were no problem for both, until it caused multiple balls to be in the playing field. 
+Both agents were not trained to handle this, but the vector agent did adapt better to the situation than the pixel agent could. 
+Wide environments made it hard for the REINFORCE agent to even converge before 1000 episodes, causing it to do quite badly in comparison to the vector agent.
+The "shake" behaviour of the vector agent was also observed in the pixel agent. 
+This could be due to the fact that the entropy regularization was still letting the agent explore the action space.  
 
 
 % -------------------------------------------------------------------
 \subsection{Future Work}
-%Train agents on the different speeds.
-%Train agents n-step bootstrapping with different values.
-%Have environments with more speed, to see the reaction of agents that shake at low speeds.
-%Have agents learn for more episodes, to see if shaking behaviour disappears. 
+During the research, there were some ideas that we did not have the time to test and document properly.
+We would like to explore different speeds and environments, to see how the agents react to these changes.
+Does the agent need to train longer, or do we need to create a smaller environment to make it work?
+Furthermore, the shaking behaviour seemed to stop at certain speeds, which is interesting to research further.
+The shaking behaviour might also be due to the fact that the agent is not trained for long enough, and that it will disappear after more training.
+We would also like to test the Actor-Critic agent with different n-steps, to see if this has a significant impact on the performance of the agent.
+During some late testing we noticed the effect of n-step (10) bootstrapping, but we did not have the time to test and document this properly.
 
 
 % -------------------------------------------------------------------
 \subsection{Contributions}
 \label{C-Contributes}
 
-% In the unusual situation where you want a paper to appear in the
-% references without citing it in the main text, use \nocite
-%\nocite{langley00}
+%Let me know what you have in mind about this :) 
+Overview of contributions:
+-Code Reinforce / Actor-Critic (Josef + Koen)
+-Code Utils / wandb (Josef)
+-Paper (Koen + Josef)
 
 
 \bibliography{main}

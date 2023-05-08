@@ -18,6 +18,7 @@ class PBAgent(ABC):
     @abstractmethod
     def __init__(self,
         alpha: float, beta: float, gamma: float, delta: float, batchSize: int,
+        bootstrap: bool, baselineSubtraction: bool,
         device: torch.device, actor: torch.nn.Module, critic: torch.nn.Module = None,
     ) -> None:
         """ Initializes the agent by setting hyperparameters and creating the model(s).
@@ -30,6 +31,8 @@ class PBAgent(ABC):
             `float` gamma: discount factor
             `float` delta: learning rate decay rate
             `int` batchSize: number of transitions to use for a single update
+            `bool` bootstrap: toggle bootstrapping
+            `bool` baselineSubtraction: toggle baseline subtraction
 
         Torch:
             `torch.device` device: device to run on
@@ -47,6 +50,8 @@ class PBAgent(ABC):
         self.gamma = gamma
         self.delta = delta
         self.batchSize = batchSize
+        self.bootstrap = bootstrap
+        self.baseSub = baselineSubtraction
         return
 
     #####################

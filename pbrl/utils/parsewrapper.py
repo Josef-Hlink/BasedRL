@@ -52,6 +52,12 @@ class ParseWrapper:
         parser.add_argument('-bs', dest='batchSize',
             type=int, default=defaults.agent.batchSize, help=f'Batch size for training'
         )
+        parser.add_argument('-bo', dest='bootstrap',
+            action='store_true', help=f'Use bootstrapping for training actor-critic agent'
+        )
+        parser.add_argument('-bl', dest='baselineSubtraction',
+            action='store_true', help=f'Subtract baseline from returns for training actor-critic agent'
+        )
 
         # --- environment --- #
         parser.add_argument('-et', dest='envType',
@@ -111,6 +117,8 @@ class ParseWrapper:
                 gamma = args.gamma,
                 delta = args.delta,
                 batchSize = args.batchSize,
+                bootstrap = args.bootstrap,
+                baselineSubtraction = args.baselineSubtraction,
             ),
             env = DotDict(
                 obsType = args.envType,

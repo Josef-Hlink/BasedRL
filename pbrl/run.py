@@ -56,6 +56,8 @@ def main():
         gamma = config.agent.gamma,
         delta = config.agent.delta,
         batchSize = config.agent.batchSize,
+        bootstrap = config.agent.bootstrap,
+        baselineSubtraction = config.agent.baselineSubtraction,
         # torch
         device = device,
         actor = actor,
@@ -107,6 +109,8 @@ def _initRun() -> tuple[DotDict, torch.device]:
         gamma: float
         delta: float
         batchSize: int
+        bootstrap: bool
+        baselineSubtraction: bool
     env:
         obsType: str
         nRows: int

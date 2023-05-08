@@ -92,6 +92,8 @@ def renderTrainedAgent(runID: str, nEpisodes: int, nRows: int = None, nCols: int
         gamma = config['agent']['gamma'],
         delta = config['agent']['delta'],
         batchSize = config['agent']['batchSize'],
+        bootstrap = config['agent']['bootstrap'],
+        baselineSubtraction = config['agent']['baselineSubtraction'],
         # torch
         actor = actor,
         critic = critic,

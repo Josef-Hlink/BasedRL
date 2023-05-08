@@ -19,10 +19,11 @@ class ActorCriticAgent(PBAgent):
 
     def __init__(self,
         alpha: float, beta: float, gamma: float, delta: float, batchSize: int,
+        bootstrap: bool, baselineSubtraction: bool,
         device: torch.device, actor: torch.nn.Module, critic: torch.nn.Module = None,
     ) -> None:
         assert critic is not None, 'Critic cannot be None for ActorCriticAgent'
-        super().__init__(alpha, beta, gamma, delta, batchSize, device, actor, critic)
+        super().__init__(alpha, beta, gamma, delta, batchSize, bootstrap, baselineSubtraction, device, actor, critic)
         return
 
     ##########
@@ -121,13 +122,10 @@ class ActorCriticAgent(PBAgent):
         # Define n_steps (number of steps to look ahead for n-step return) #TODO: should be self.n_steps for testing. 
         n_steps = 3
 
-        # Bootstrapping flag
-        bts = True
-
         # unpack transition batch into tensors (and put on device)
         S, A, R, S_, D = map(lambda x: x.to(self.device), (tB.S, tB.A, tB.R, tB.S_, tB.D))
         
-        if bts == False:
+        if self.bootstrap == False:
             with torch.no_grad():
                 V_ = self.critic(S_).squeeze()
                 G = R + self.gamma * V_ * (1 - D)            
@@ -139,7 +137,7 @@ class ActorCriticAgent(PBAgent):
             # slice mini-batch from the full batch
             slc: slice = slice(i, i + self.batchSize)
 
-            if bts:
+            if self.bootstrap:
                 _S, _A, _R, _S_, _D = map(lambda x: x[slc], (S, A, R, S_, D))
 
                 # calculate target values using critic network
@@ -164,7 +162,7 @@ class ActorCriticAgent(PBAgent):
                     totalVL += batchVL
 
             
-            if bts == False:
+            if self.bootstrap == False:
                 _S, _A, _G = map(lambda x: x[slc], (S, A, G))
                 # update policy and value function and get batch metrics
                 batchPG, batchVL = self._updatePolicy(_S, _A, _G)
@@ -177,7 +175,7 @@ class ActorCriticAgent(PBAgent):
         self.aScheduler.step()
         self.cScheduler.step()
 
-        if bts:
+        if self.bootstrap:
             # return average metrics
             return totalPG / (len(tB) - n_steps), totalVL / (len(tB) - n_steps)
 
@@ -200,18 +198,17 @@ class ActorCriticAgent(PBAgent):
         """
         maxGradNorm = 0.5
         # Baseline subtraction flag
-        bls = True
+        # self.baseSub = True
 
         # forward pass to get action distribution
         dist = torch.distributions.Categorical(self.actor(S))
 
-        #TODO: self.baselinesubtraction (bls) needs to be initialized with agent as boolean. 
-        if bls: 
+        if self.baseSub:
             # calculate the baseline as the mean of the value function estimates.
             baseline = torch.mean( self.critic(S).squeeze())
 
             # calculate advantage by using baseline subtraction.
-            advantage = G -  self.critic(S).squeeze().detach() + baseline
+            advantage = G - self.critic(S).squeeze().detach() + baseline
 
             # calculate policy loss with baseline subtraction. 
             policyGradient = -dist.log_prob(A) * advantage
@@ -235,7 +232,7 @@ class ActorCriticAgent(PBAgent):
         self.aOptimizer.step()
 
         # calculate value function loss
-        if bls:
+        if self.baseSub:
             valueLoss = ( self.critic(S).squeeze() - (G - baseline).detach()) ** 2
         else:
             valueLoss = (self.critic(S).squeeze() - G) ** 2

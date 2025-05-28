@@ -25,3 +25,12 @@ After building the project, the following commands are available:
 - `pbrl-sweep` to run a sweep of experiments using [wandb](https://wandb.ai/)
 
 To see what arguments each command takes, run the command with either the `-h` or `--help` flag.
+
+>[!CAUTION]
+
+In order to do any rendering (`pbrl-render`) you'll need [tkinter](https://docs.python.org/3/library/tkinter.html).
+
+```bash
+sudo apt install python3-tk  # on ubuntu/deb with apt
+brew install python3-tk      # on macos with brew
+```

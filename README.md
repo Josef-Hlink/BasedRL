@@ -27,8 +27,7 @@ After building the project, the following commands are available:
 To see what arguments each command takes, run the command with either the `-h` or `--help` flag.
 
 >[!CAUTION]
-
-In order to do any rendering (`pbrl-render`) you'll need [tkinter](https://docs.python.org/3/library/tkinter.html).
+> In order to do any rendering (`pbrl-render`) you'll need [tkinter](https://docs.python.org/3/library/tkinter.html).
 
 ```bash
 sudo apt install python3-tk  # on ubuntu/deb with apt

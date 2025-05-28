@@ -12,3 +12,4 @@ wandb
 pbrl.egg-info
 dist
 build
+.python-version

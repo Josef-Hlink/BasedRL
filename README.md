@@ -9,12 +9,20 @@ Contributors:
 
 ## Setup
 
-1. clone the repo
-2. (recommended) create and activate virtual environment
-   - `python3 -m venv venv`
-   - `source venv/bin/activate`
-3. build project
-   - `pip install -e .`
+With pip:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -e .
+```
+
+With uv:
+
+```bash
+uv sync
+source venv/bin/activate  # for environment scripts
+```
 
 ## Usage
 
